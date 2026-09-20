@@ -96,8 +96,34 @@ async function compile(target: string, outfile: string, windows = false): Promis
 }
 
 /**
- * Wrap a compiled binary in a macOS .app. The binary detects that it is running inside a
- * bundle and opens the UI itself, so no launcher script is needed.
+ * Compile the menu bar front end (apps/macos/CronRunnerMenuBar.swift) for one architecture.
+ * swiftc cross-compiles between arm64 and x86_64 on any Mac with the command line tools.
+ */
+async function compileMenuBar(arch: "arm64" | "x64", outfile: string): Promise<void> {
+  const triple = arch === "arm64" ? "arm64-apple-macos11" : "x86_64-apple-macos11";
+  await run([
+    "swiftc",
+    "-O",
+    "-target",
+    triple,
+    "-framework",
+    "AppKit",
+    "-o",
+    outfile,
+    join(ROOT, "apps", "macos", "CronRunnerMenuBar.swift"),
+  ]);
+}
+
+/**
+ * Assemble the macOS .app.
+ *
+ *   Contents/MacOS/CronRunner       the Swift menu bar app, which macOS launches
+ *   Contents/Resources/cronrunner   the Bun daemon it starts, and stops on quit
+ *
+ * `LSUIElement` keeps it out of the Dock: it lives in the menu bar, like any background
+ * utility. The daemon sits in Resources rather than MacOS, so it no longer matches the
+ * "launched from a bundle" check that makes it open a browser; the menu bar app opens the
+ * interface itself, once, when the daemon is ready.
  *
  * The bundle is re-signed afterwards, which is not optional. Bun's compiled binary arrives
  * ad-hoc "linker-signed" with the identifier `a.out`, and a signature made before the bundle
@@ -107,15 +133,17 @@ async function compile(target: string, outfile: string, windows = false): Promis
  * ad-hoc makes it internally consistent. The app is still not notarized, so users get the
  * ordinary "unidentified developer" prompt, which they can get past.
  */
-async function buildAppBundle(binary: string, appPath: string): Promise<void> {
+async function buildAppBundle(daemon: string, menuBar: string, appPath: string): Promise<void> {
   rmSync(appPath, { recursive: true, force: true });
   const macos = join(appPath, "Contents", "MacOS");
   const resources = join(appPath, "Contents", "Resources");
   mkdirSync(macos, { recursive: true });
   mkdirSync(resources, { recursive: true });
 
-  cpSync(binary, join(macos, "CronRunner"));
+  cpSync(menuBar, join(macos, "CronRunner"));
   chmodSync(join(macos, "CronRunner"), 0o755);
+  cpSync(daemon, join(resources, "cronrunner"));
+  chmodSync(join(resources, "cronrunner"), 0o755);
   cpSync(join(ICON_DIR, "AppIcon.icns"), join(resources, "AppIcon.icns"));
 
   writeInfoPlist(appPath);
@@ -138,6 +166,7 @@ function writeInfoPlist(appPath: string): void {
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleVersion</key><string>${VERSION}</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
+  <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
 </dict>
 </plist>
@@ -255,10 +284,13 @@ if (process.platform === "darwin") {
     process.stdout.write(`  ${label} … `);
     const binary = join(STAGE, `cronrunner-${arch}`);
     await compile(target, binary);
+    const menuBar = join(STAGE, `menubar-${arch}`);
+    await compileMenuBar(arch, menuBar);
     const app = join(STAGE, `CronRunner-${arch}.app`);
-    await buildAppBundle(binary, app);
-    // Free the raw binary before hdiutil runs; it is already inside the bundle.
+    await buildAppBundle(binary, menuBar, app);
+    // Free the raw binaries before hdiutil runs; they are already inside the bundle.
     rmSync(binary, { force: true });
+    rmSync(menuBar, { force: true });
     const dmg = join(DIST, `CronRunner-${VERSION}-macos-${arch}.dmg`);
     await buildDmg(app, dmg);
     rmSync(app, { recursive: true, force: true });

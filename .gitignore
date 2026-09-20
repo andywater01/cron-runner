@@ -10,3 +10,5 @@ build/
 .cronrunner/
 apps/server/public/
 .playwright-mcp/
+apps/server/.verify/
+apps/server/.package/

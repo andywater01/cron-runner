@@ -1,8 +1,9 @@
 # Builds the downloadable apps and publishes them as a GitHub Release.
 #
 # Each platform is built on its own runner because the packaging needs native tooling:
-# the macOS .dmg needs hdiutil, and Bun's --windows-icon / --windows-hide-console are only
-# accepted when compiling on Windows. Cross-compiling produces working but plain files.
+# the macOS app needs swiftc (from the runner's Xcode) for its menu bar front end and hdiutil
+# for the .dmg, and Bun's --windows-icon / --windows-hide-console are only accepted when
+# compiling on Windows. Cross-compiling produces working but plain files.
 #
 # Cut a release with:
 #   git tag v0.1.0 && git push origin v0.1.0
@@ -54,13 +55,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-
-      - name: Free disk space on macOS runners
-        if: startsWith(matrix.platform, 'macos')
-        run: |
-          df -h /
-          sudo rm -rf /Applications/Xcode_*.app || true
-          df -h /
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
