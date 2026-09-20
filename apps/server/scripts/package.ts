@@ -182,11 +182,14 @@ echo "Make sure $BIN is on your PATH, then run: cronrunner --open"
 // ---------------------------------------------------------------------------
 
 /**
- * `--only=macos|windows|linux` limits the run to one platform. The release workflow uses it
- * so each runner builds the artifacts only it can build properly.
+ * `--only=<target>` limits the run. Accepts a platform (`macos`, `windows`, `linux`) or a
+ * single macOS architecture (`macos-arm64`, `macos-x64`). The release workflow gives each
+ * runner one target: macOS runners are tight on disk, and building both architectures on one
+ * of them exhausts it part way through the second disk image.
  */
 const onlyArg = process.argv.find((a) => a.startsWith("--only="))?.split("=")[1];
-const wants = (platform: string) => !onlyArg || onlyArg === platform;
+const wants = (target: string) =>
+  !onlyArg || onlyArg === target || onlyArg === target.split("-")[0];
 
 rmSync(STAGE, { recursive: true, force: true });
 mkdirSync(STAGE, { recursive: true });
@@ -197,18 +200,22 @@ console.log(`[package] CronRunner ${VERSION}${onlyArg ? ` (${onlyArg} only)` : "
 const artifacts: { platform: string; file: string }[] = [];
 
 // macOS, one .dmg per architecture.
-if (wants("macos") && process.platform === "darwin") {
+if (process.platform === "darwin") {
   for (const [target, arch, label] of [
     ["bun-darwin-arm64", "arm64", "macOS (Apple silicon)"],
     ["bun-darwin-x64", "x64", "macOS (Intel)"],
   ] as const) {
+    if (!wants(`macos-${arch}`)) continue;
     process.stdout.write(`  ${label} … `);
     const binary = join(STAGE, `cronrunner-${arch}`);
     await compile(target, binary);
     const app = join(STAGE, `CronRunner-${arch}.app`);
     buildAppBundle(binary, app);
+    // Free the raw binary before hdiutil runs; it is already inside the bundle.
+    rmSync(binary, { force: true });
     const dmg = join(DIST, `CronRunner-${VERSION}-macos-${arch}.dmg`);
     await buildDmg(app, dmg);
+    rmSync(app, { recursive: true, force: true });
     artifacts.push({ platform: label, file: dmg });
     console.log(mb(dmg));
   }
