@@ -93,11 +93,26 @@ export function describeSchedule(schedule: string): string {
   }
 }
 
+/**
+ * croner's messages are accurate but leak its internals ("CronPattern: ...").
+ * Tidy them so the UI can show the text as-is.
+ */
+function friendlyCronError(raw: string): string {
+  const message = raw.replace(/^CronPattern:\s*/i, "").trim();
+  if (/exactly five or six space separated parts/i.test(message)) {
+    return "A schedule needs five space-separated fields: minute hour day-of-month month day-of-week.";
+  }
+  return message.charAt(0).toUpperCase() + message.slice(1);
+}
+
 export function validateSchedule(schedule: string): { valid: boolean; error?: string } {
   try {
     new Cron(schedule);
     return { valid: true };
   } catch (err) {
-    return { valid: false, error: err instanceof Error ? err.message : String(err) };
+    return {
+      valid: false,
+      error: friendlyCronError(err instanceof Error ? err.message : String(err)),
+    };
   }
 }

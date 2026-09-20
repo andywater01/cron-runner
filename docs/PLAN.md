@@ -60,15 +60,19 @@ Build every primitive in `DESIGN.md §2` as its own file. Keep them small, typed
 
 ## Phase 3 — Job editor (manual)
 
-- [ ] **3.1** `components/jobs/ScheduleField.tsx`: preset `<Select>` + cron `<Input>` (mono). Debounced (300 ms) call to `api.jobs.validateSchedule`; shows English text or error; exposes `next[]` to the parent for the preview card.
-- [ ] **3.2** `components/jobs/TimezoneSelect.tsx`: searchable list from `Intl.supportedValuesOf("timeZone")`, first option "Local (<zone>)" → `null`.
-- [ ] **3.3** `components/jobs/EnvVarsEditor.tsx`, `components/jobs/TagsInput.tsx`.
-- [ ] **3.4** `components/jobs/JobForm.tsx`: controlled form over `CreateJobInput`; client-side validation with `CreateJobInputSchema.safeParse` on submit, mapping zod issues to field errors. Props: `initial`, `onSubmit`, `submitting`.
-- [ ] **3.5** `components/jobs/JobPreviewCard.tsx`: human schedule, next 5 runs, command CodeBlock, cwd/shell/timeout summary.
-- [ ] **3.6** `pages/JobEditorPage.tsx`: loads job when `:id` present; two-panel layout; Save → create or update → navigate to detail with toast. Cancel → back. Unsaved-changes guard on navigation (simple `beforeunload` + confirm on in-app nav is enough).
-- [ ] **3.7** Duplicate: `/jobs/new?from=<id>` prefills from that job with name suffixed " (copy)".
+- [x] **3.1** `components/jobs/ScheduleField.tsx`: preset `<Select>` + cron `<Input>` (mono). Debounced (300 ms) call to `api.jobs.validateSchedule`; shows English text or error; exposes `next[]` to the parent for the preview card.
+- [x] **3.2** `components/jobs/TimezoneSelect.tsx`: searchable list from `Intl.supportedValuesOf("timeZone")`, first option "Local (<zone>)" → `null`.
+- [x] **3.3** `components/jobs/EnvVarsEditor.tsx`, `components/jobs/TagsInput.tsx`.
+- [x] **3.4** `components/jobs/JobForm.tsx`: controlled form over `CreateJobInput`; client-side validation with `CreateJobInputSchema.safeParse` on submit, mapping zod issues to field errors. Props: `initial`, `onSubmit`, `submitting`.
+- [x] **3.5** `components/jobs/JobPreviewCard.tsx`: human schedule, next 5 runs, command CodeBlock, cwd/shell/timeout summary.
+- [x] **3.6** `pages/JobEditorPage.tsx`: loads job when `:id` present; two-panel layout; Save → create or update → navigate to detail with toast. Cancel → back. Unsaved-changes guard on navigation (simple `beforeunload` + confirm on in-app nav is enough).
+- [x] **3.7** Duplicate: `/jobs/new?from=<id>` prefills from that job with name suffixed " (copy)".
 
-**Verify:** create, edit, duplicate jobs entirely from the UI; invalid cron shows an inline error and blocks save; timezone changes shift the preview times.
+**Verify:** ✅ Created a job entirely in the UI (name, cron, command, tags, env var) and confirmed the persisted record over the API. Edit and duplicate both seed every field; duplicate suffixes the name. Invalid cron shows an inline error in the field and the preview and blocks save. Switching to Asia/Tokyo shifted the preview from 2:30 PM to 1:30 AM local. Unsaved-changes guard stays put on decline and leaves on accept.
+
+*Fixed during verification:* `EnvVarsEditor` initialised its rows once on mount, before the job query resolved, so edit/duplicate silently dropped environment variables (an edit would have wiped them on save). It now re-seeds when the record is replaced from outside. Also replaced croner's raw `CronPattern:` errors with plain-English text.
+
+*Implementation note:* form state lives in `JobEditorPage` rather than inside `JobForm`, so the sticky preview card and the form share one state and one debounced validation query.
 
 ## Phase 4 — Job detail and run viewer
 
