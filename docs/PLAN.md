@@ -103,13 +103,13 @@ Build every primitive in `DESIGN.md §2` as its own file. Keep them small, typed
 
 ## Phase 6 — AI job builder
 
-- [ ] **6.1** `hooks/useAi.ts`: `useGenerateJob()`, `useExplainCron()`, `useDiagnoseRun()`.
-- [ ] **6.2** `components/ai/AiPromptPanel.tsx`: textarea, example chips, Generate button, loading state; when `settings.keys[provider].configured` is false render the "add a key" callout instead.
-- [ ] **6.3** `components/ai/AiDraftCallout.tsx`: explanation, warnings (amber, `AlertTriangle` icon), clarifying questions with a reply input that re-calls generate with `currentDraft` = current form values and `history` = prior turns.
-- [ ] **6.4** In `JobEditorPage`, `mode=ai` shows the AI tab first; on draft, merge into form state (`source: "ai"`), scroll to form, keep the callout visible above it. Refinement replaces form values but preserves fields the user changed by hand since the last generate (track a `dirtyFields` set; send those as part of `currentDraft` so the model keeps them).
-- [ ] **6.5** Cron "Explain" link next to the schedule field (uses `explainCron`; falls back to the cronstrue text when no key).
-- [ ] **6.6** Run drawer: "Ask AI why this failed" for failed/timeout runs → `AiDiagnosisCard` with "Apply suggested command" → navigates to `/jobs/:id/edit` with the command prefilled via router state.
-- [ ] **6.7** Prompt tuning: run the six example prompts below on both providers and adjust `src/llm/prompts.ts` until all produce valid drafts with sensible warnings:
+- [x] **6.1** `hooks/useAi.ts`: `useGenerateJob()`, `useExplainCron()`, `useDiagnoseRun()`.
+- [x] **6.2** `components/ai/AiPromptPanel.tsx`: textarea, example chips, Generate button, loading state; when `settings.keys[provider].configured` is false render the "add a key" callout instead.
+- [x] **6.3** `components/ai/AiDraftCallout.tsx`: explanation, warnings (amber, `AlertTriangle` icon), clarifying questions with a reply input that re-calls generate with `currentDraft` = current form values and `history` = prior turns.
+- [x] **6.4** In `JobEditorPage`, `mode=ai` shows the AI tab first; on draft, merge into form state (`source: "ai"`), scroll to form, keep the callout visible above it. Refinement replaces form values but preserves fields the user changed by hand since the last generate (track a `dirtyFields` set; send those as part of `currentDraft` so the model keeps them).
+- [x] **6.5** Cron "Explain" link next to the schedule field (uses `explainCron`; falls back to the cronstrue text when no key).
+- [x] **6.6** Run drawer: "Ask AI why this failed" for failed/timeout runs → `AiDiagnosisCard` with "Apply suggested command" → navigates to `/jobs/:id/edit` with the command prefilled via router state.
+- [~] **6.7** Prompt tuning: run the six example prompts below on both providers and adjust `src/llm/prompts.ts` until all produce valid drafts with sensible warnings:
   - "Back up ~/Documents to ~/Backups every night at 2am"
   - "Delete files in my Downloads older than 30 days every Sunday morning"
   - "Every 5 minutes check if https://example.com responds and append the status to ~/uptime.log"
@@ -117,7 +117,13 @@ Build every primitive in `DESIGN.md §2` as its own file. Keep them small, typed
   - "Empty the trash on the 1st of every month"
   - "Remind me to stretch every hour during work hours" (should produce a notification command per OS: `osascript -e 'display notification…'`, `notify-send`, PowerShell toast)
 
-**Verify:** each example yields a saved, runnable job with ≤1 refinement; the destructive ones carry warnings.
+**Verify:** ⚠️ Flow verified end to end, prompt quality not.
+
+Verified against a mock provider (see below): typing a description produces a draft, the form fills in (name, cron, command, timeout, tags, `source: "ai"`), and the callout shows the explanation, amber warnings and a clarifying question. Refinement works conversationally — *"make it 7pm on weekdays only"* changed the cron from `0 2 * * *` to `0 19 * * 1-5` and cleared the question; the mock only returns a revision when it receives `currentDraft`, which proves the draft round-trips instead of restarting. Saving stores `source: "ai"`. On a failed run, *Ask AI why this failed* renders the diagnosis and **Apply suggested command** opens the editor with that command prefilled. With no key configured, every AI entry point shows the "add a key in Settings" callout instead of an error.
+
+**Not verified: the six example prompts against real providers**, because no API key was available. The prompt was extended for those cases anyway (OS-native notifications, log redirection with timestamps, `curl` health checks, `*/N` and weekday cron idioms, quoting paths), but nothing has confirmed what a real model returns. This is the remaining work for Phase 6 and it needs a key.
+
+*Added during verification:* `CRONRUNNER_LLM_BASE_URL` points the SDKs at any OpenAI/Anthropic-compatible endpoint. It exists so this path can be exercised without a real key, and doubles as proxy/gateway support for users behind one. A mock provider served a canned draft, refinement and diagnosis over it. Also added `jsonSchema.test.ts` covering the strict-mode schema contract.
 
 ## Phase 7 — Dashboard, packaging, start-at-login
 

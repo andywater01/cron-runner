@@ -1,6 +1,7 @@
 import { Copy, History, Pencil, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { RunDiagnosis } from "@/components/ai/RunDiagnosis";
 import { LOCAL_TIMEZONE } from "@/components/jobs/TimezoneSelect";
 import { RunDrawer } from "@/components/runs/RunDrawer";
 import { RunsTable } from "@/components/runs/RunsTable";
@@ -208,7 +209,12 @@ export function JobDetailPage() {
         <RunsTable runs={runs.data ?? []} loading={runs.isPending} onSelect={setSelectedRun} />
       )}
 
-      <RunDrawer runId={selectedRun} onClose={() => setSelectedRun(null)} jobName={job.name} />
+      <RunDrawer
+        runId={selectedRun}
+        onClose={() => setSelectedRun(null)}
+        jobName={job.name}
+        renderDiagnosis={(runId) => <RunDiagnosis runId={runId} jobId={job.id} />}
+      />
 
       <ConfirmDialog
         open={confirmDelete}

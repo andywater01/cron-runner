@@ -37,8 +37,9 @@ export class OpenAiProvider implements LlmClient {
   constructor(
     apiKey: string,
     private model: string,
+    baseURL?: string,
   ) {
-    this.client = new OpenAI({ apiKey });
+    this.client = new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
   }
 
   private async structured(args: {

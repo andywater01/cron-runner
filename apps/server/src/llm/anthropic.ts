@@ -37,8 +37,9 @@ export class AnthropicProvider implements LlmClient {
   constructor(
     apiKey: string,
     private model: string,
+    baseURL?: string,
   ) {
-    this.client = new Anthropic({ apiKey });
+    this.client = new Anthropic({ apiKey, ...(baseURL ? { baseURL } : {}) });
   }
 
   /** Collect the plain text of a response. */

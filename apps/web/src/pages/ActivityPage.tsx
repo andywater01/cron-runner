@@ -2,6 +2,7 @@ import type { RunStatus } from "@cronrunner/shared";
 import clsx from "clsx";
 import { Activity } from "lucide-react";
 import { useMemo, useState } from "react";
+import { RunDiagnosis } from "@/components/ai/RunDiagnosis";
 import { RunDrawer } from "@/components/runs/RunDrawer";
 import { RunsTable } from "@/components/runs/RunsTable";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -104,6 +105,9 @@ export function ActivityPage() {
         runId={selectedRun}
         onClose={() => setSelectedRun(null)}
         jobName={selected ? jobName(selected.jobId) : undefined}
+        renderDiagnosis={(runId) =>
+          selected ? <RunDiagnosis runId={runId} jobId={selected.jobId} /> : null
+        }
       />
     </>
   );

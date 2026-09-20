@@ -32,6 +32,15 @@ export class LlmNotConfiguredError extends Error {
   }
 }
 
+/**
+ * Point the SDKs somewhere other than the provider's own servers.
+ * Set `CRONRUNNER_LLM_BASE_URL` to an OpenAI/Anthropic-compatible endpoint: a corporate
+ * proxy, a local gateway, or the mock provider used to exercise this path in tests.
+ */
+function baseUrlOverride(): string | undefined {
+  return process.env.CRONRUNNER_LLM_BASE_URL || undefined;
+}
+
 export function getLlmClient(override?: {
   provider?: LlmProvider;
   apiKey?: string;
@@ -42,7 +51,8 @@ export function getLlmClient(override?: {
   const apiKey = override?.apiKey ?? getApiKey(provider);
   if (!apiKey) throw new LlmNotConfiguredError(provider);
   const model = override?.model ?? settings.llm.model ?? DEFAULT_MODELS[provider];
+  const baseURL = baseUrlOverride();
   return provider === "anthropic"
-    ? new AnthropicProvider(apiKey, model)
-    : new OpenAiProvider(apiKey, model);
+    ? new AnthropicProvider(apiKey, model, baseURL)
+    : new OpenAiProvider(apiKey, model, baseURL);
 }

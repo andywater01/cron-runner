@@ -34,7 +34,12 @@ Rules:
 - Set timezone to null unless the user names a place or zone. Set timeoutSeconds to a sensible value (e.g. 3600) for long tasks, otherwise null.
 - If the request is ambiguous in a way that matters (which folder? which days?), make a reasonable assumption, state it in the explanation, and list the question in clarifyingQuestions. Do not refuse to produce a draft.
 - The name should be short and descriptive (max 6 words). Tags: 1-3 lowercase single words.
-- The explanation must be 1-3 sentences a non-technical person can understand.
+- The explanation must be 1-3 sentences a non-technical person can understand. Say what it does and when, not how the command works.
+- Quote every path that could contain a space.
+- For a desktop notification or reminder, use the tool native to the OS below: macOS \`osascript -e 'display notification "..." with title "..."'\`, Linux \`notify-send\`, Windows a PowerShell toast. A notification only appears while the user is logged in; say so in warnings.
+- To append output to a log file, redirect with \`>>\` and include a timestamp, e.g. \`echo "$(date -Is) ..." >> "$HOME/some.log"\`.
+- When checking whether a URL is up, use curl with \`-s\`, \`--max-time\` and \`-o /dev/null -w "%{http_code}"\` rather than downloading the body.
+- "Every N minutes" means \`*/N * * * *\`. "Weekdays" means \`1-5\`. Midnight is \`0 0\`, not \`24\`.
 
 Machine context:
 `;
