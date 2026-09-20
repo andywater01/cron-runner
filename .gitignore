@@ -9,3 +9,4 @@ build/
 # local runtime data (db, settings, logs) if run from repo
 .cronrunner/
 apps/server/public/
+.playwright-mcp/

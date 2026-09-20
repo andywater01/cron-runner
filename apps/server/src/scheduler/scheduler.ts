@@ -45,7 +45,7 @@ export function schedule(job: Job): void {
       { timezone: job.timezone ?? undefined, protect: true, name: job.id, catch: true },
       async () => {
         const fresh = db.getJob(job.id);
-        if (!fresh || !fresh.enabled) return;
+        if (!fresh?.enabled) return;
         if (isJobRunning(fresh.id)) {
           console.warn(`[scheduler] skipping "${fresh.name}": previous run still active`);
           return;
