@@ -16,6 +16,8 @@ export interface DropdownMenuProps {
   label?: string;
   /** Custom trigger content; defaults to a ⋯ icon button. */
   trigger?: ReactNode;
+  /** Override the trigger button's classes (e.g. to match an adjacent button's height). */
+  triggerClassName?: string;
   align?: "left" | "right";
 }
 
@@ -24,6 +26,7 @@ export function DropdownMenu({
   items,
   label = "More actions",
   trigger,
+  triggerClassName,
   align = "right",
 }: DropdownMenuProps) {
   const [open, setOpen] = useState(false);
@@ -58,7 +61,10 @@ export function DropdownMenu({
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        className="inline-flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/50"
+        className={clsx(
+          "inline-flex items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500/50",
+          triggerClassName ?? "size-8 text-muted hover:bg-surface-muted hover:text-default",
+        )}
       >
         {trigger ?? <MoreHorizontal className="size-4" />}
       </button>

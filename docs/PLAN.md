@@ -49,14 +49,14 @@ Build every primitive in `DESIGN.md §2` as its own file. Keep them small, typed
 
 ## Phase 2 — Jobs list page
 
-- [ ] **2.1** `hooks/useJobs.ts`: `useJobs()`, `useJob(id)`, mutations `useCreateJob`, `useUpdateJob`, `useDeleteJob`, `useToggleJob` (optimistic update of `enabled` in the `qk.jobs` cache, rollback on error + toast), `useRunNow`.
-- [ ] **2.2** `components/jobs/JobsTable.tsx` per `DESIGN.md §4.2`. Row click navigates; the switch and action buttons `stopPropagation`.
-- [ ] **2.3** `components/jobs/JobFilters.tsx`: search + status chips; filtering is client-side over the list.
-- [ ] **2.4** `pages/JobsPage.tsx`: header with "New job" split button (With AI → `/jobs/new?mode=ai`, Manually → `/jobs/new`), filters, table, empty state, skeleton while loading.
-- [ ] **2.5** Delete flow: `ConfirmDialog` → `useDeleteJob` → toast → stays on page.
-- [ ] **2.6** Keyboard: `N` → new job (ignore when focus is in an input), `/` → focus search.
+- [x] **2.1** `hooks/useJobs.ts`: `useJobs()`, `useJob(id)`, mutations `useCreateJob`, `useUpdateJob`, `useDeleteJob`, `useToggleJob` (optimistic update of `enabled` in the `qk.jobs` cache, rollback on error + toast), `useRunNow`.
+- [x] **2.2** `components/jobs/JobsTable.tsx` per `DESIGN.md §4.2`. Row click navigates; the switch and action buttons `stopPropagation`.
+- [x] **2.3** `components/jobs/JobFilters.tsx`: search + status chips; filtering is client-side over the list.
+- [x] **2.4** `pages/JobsPage.tsx`: header with "New job" split button (With AI → `/jobs/new?mode=ai`, Manually → `/jobs/new`), filters, table, empty state, skeleton while loading.
+- [x] **2.5** Delete flow: `ConfirmDialog` → `useDeleteJob` → toast → stays on page.
+- [x] **2.6** Keyboard: `N` → new job (ignore when focus is in an input), `/` → focus search.
 
-**Verify:** create a few jobs via curl, confirm list/filters/toggle/run-now/delete all work and the list updates live (SSE) when a scheduled run finishes.
+**Verify:** ✅ Seeded 5 jobs via curl. Confirmed in-browser: list renders with correct counts; status chips and search (name + command + tags) filter; optimistic toggle persists server-side and re-registers the schedule; Run now fires with a toast and the row flips to Success; delete goes menu → confirm dialog → toast → row removed. SSE verified live: the every-minute job fired at the minute boundary, pushed `run.started`/`run.finished`, and the row updated from "21 seconds ago" to "just now" with no reload. 0 console errors.
 
 ## Phase 3 — Job editor (manual)
 
