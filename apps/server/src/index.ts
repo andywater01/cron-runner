@@ -41,18 +41,26 @@ console.log(`CronRunner v${APP_VERSION} listening on ${url} (ui: ${staticSource}
 console.log(`Data directory: ${DATA_DIR}`);
 console.log(`Log file: ${LOG_FILE_PATH}`);
 
-/** `--open` launches the default browser once the server is listening. */
-if (process.argv.includes("--open")) {
+/**
+ * Open the UI once the server is listening. Explicit with `--open`, and automatically when
+ * launched from a macOS .app bundle or a Windows/Linux desktop entry, where there is no
+ * terminal to read the address from — double-clicking the app should just show the app.
+ */
+const launchedFromDesktop =
+  process.execPath.includes(".app/Contents/MacOS/") || process.env.CRONRUNNER_OPEN === "1";
+
+if (process.argv.includes("--open") || launchedFromDesktop) {
   const opener =
     process.platform === "darwin"
       ? ["open", url]
       : process.platform === "win32"
         ? ["cmd", "/c", "start", "", url]
         : ["xdg-open", url];
+  console.log(`[startup] opening ${url} in your browser`);
   try {
     Bun.spawn(opener, { stdout: "ignore", stderr: "ignore" });
   } catch {
-    console.warn(`[startup] could not open a browser; visit ${url}`);
+    console.warn(`[startup] could not open a browser automatically; visit ${url}`);
   }
 }
 

@@ -16,8 +16,11 @@ import { mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { DEFAULT_PORT } from "@cronrunner/shared";
+// Single source of truth for the version: the workspace root package.json, which is also
+// what the packaging script stamps onto every downloadable file name.
+import rootPackage from "../../../package.json" with { type: "json" };
 
-export const APP_VERSION = "0.1.0";
+export const APP_VERSION: string = rootPackage.version;
 
 export function resolveDataDir(): string {
   const override = process.env.CRONRUNNER_DATA_DIR;

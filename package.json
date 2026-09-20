@@ -17,7 +17,8 @@
     "test": "bun test",
     "lint": "bunx @biomejs/biome check .",
     "format": "bunx @biomejs/biome format --write .",
-    "release": "bun run --cwd apps/web build && bun run --cwd apps/server embed && bun apps/server/scripts/release.ts"
+    "icons": "bun apps/server/scripts/make-icons.ts",
+    "package": "bun run --cwd apps/web build && bun run --cwd apps/server embed && bun apps/server/scripts/package.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.1.0",

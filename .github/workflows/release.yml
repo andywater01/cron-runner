@@ -1,0 +1,79 @@
+# Builds the downloadable apps and publishes them as a GitHub Release.
+#
+# Each platform is built on its own runner because the packaging needs native tooling:
+# macOS .dmg needs hdiutil, and Bun's --windows-icon / --windows-hide-console are only
+# accepted when compiling on Windows. Cross-compiling would produce working but plain files.
+#
+# Cut a release with:
+#   git tag v0.1.0 && git push origin v0.1.0
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: macos
+          - os: windows-latest
+            platform: windows
+          - os: ubuntu-latest
+            platform: linux
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check types, tests and lint
+        run: |
+          bun run typecheck
+          bun test
+          bun run lint
+
+      - name: Build packages
+        run: bun run package -- --only=${{ matrix.platform }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cronrunner-${{ matrix.platform }}
+          path: |
+            apps/server/dist/CronRunner-*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Generate checksums
+        working-directory: artifacts
+        run: |
+          shasum -a 256 CronRunner-* > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          draft: false

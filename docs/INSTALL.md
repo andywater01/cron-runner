@@ -1,0 +1,113 @@
+# Installing CronRunner
+
+CronRunner is one self-contained application per platform. There is no runtime to install
+alongside it, no Node, no Bun, no Docker, and no account to create. Download it, open it, and
+the interface appears in your browser.
+
+## Download
+
+Current version: **0.1.0**
+
+| Platform | Download | What you get |
+| --- | --- | --- |
+| macOS, Apple silicon (M1 and later) | [CronRunner-0.1.0-macos-arm64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.0/CronRunner-0.1.0-macos-arm64.dmg) | Disk image, drag to Applications |
+| macOS, Intel | [CronRunner-0.1.0-macos-x64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.0/CronRunner-0.1.0-macos-x64.dmg) | Disk image, drag to Applications |
+| Windows 10 and 11, 64-bit | [CronRunner-0.1.0-windows-x64.exe](https://github.com/andywater01/cron-runner/releases/download/v0.1.0/CronRunner-0.1.0-windows-x64.exe) | Single executable, nothing to install |
+| Linux, 64-bit | [CronRunner-0.1.0-linux-x64.tar.gz](https://github.com/andywater01/cron-runner/releases/download/v0.1.0/CronRunner-0.1.0-linux-x64.tar.gz) | Binary, desktop entry and installer |
+
+Newer versions are on the [releases page](https://github.com/andywater01/cron-runner/releases/latest).
+Every release also ships `SHA256SUMS.txt` if you want to verify your download.
+
+## macOS
+
+Open the `.dmg` and drag **CronRunner** into your Applications folder, the same as any other
+Mac app. Launch it from Applications, Spotlight or the Dock.
+
+The first time you open it, macOS will refuse, because the app is not signed by a registered
+Apple developer. This is expected for now and there are two ways past it:
+
+- **Right-click the app and choose Open**, then click Open in the dialog. macOS remembers the
+  choice, so you only do this once.
+- Or, if macOS says the app "is damaged" or offers no Open button, clear the download
+  quarantine flag and launch it normally:
+
+  ```bash
+  xattr -dr com.apple.quarantine /Applications/CronRunner.app
+  ```
+
+Nothing about this is specific to CronRunner. It applies to any app distributed outside the
+App Store without a paid Apple Developer signature.
+
+## Windows
+
+Run the `.exe`. There is nothing to install and no console window.
+
+SmartScreen will show "Windows protected your PC" because the executable is not signed with a
+code signing certificate. Click **More info**, then **Run anyway**.
+
+If you want it in the Start menu, right-click the file, choose **Create shortcut**, and move
+the shortcut into:
+
+```
+%APPDATA%\Microsoft\Windows\Start Menu\Programs
+```
+
+## Linux
+
+Extract the archive and run the installer, which needs no root access:
+
+```bash
+tar -xzf CronRunner-0.1.0-linux-x64.tar.gz
+cd CronRunner-0.1.0-linux-x64
+./install.sh
+```
+
+That puts the binary in `~/.local/bin`, adds an icon, and registers a desktop entry so
+CronRunner appears in your application launcher. Make sure `~/.local/bin` is on your `PATH`.
+
+To run it without installing, just execute the binary directly:
+
+```bash
+./cronrunner --open
+```
+
+## After you open it
+
+CronRunner starts a small local server and opens the interface at <http://127.0.0.1:4747>. If
+your browser does not open on its own, visit that address yourself.
+
+Two things worth doing straight away:
+
+- **Turn on start at login**, in Settings. Jobs only run while CronRunner is running, so
+  without this your schedules stop when you log out or restart. CronRunner reports any runs it
+  missed while it was closed, and never silently replays them.
+- **Add an API key**, in Settings, if you want to describe jobs in plain English. You supply
+  your own OpenAI or Anthropic key and it is stored on your machine only. Everything else in
+  the app works without one.
+
+Closing the browser tab does not stop CronRunner. It keeps running so your jobs keep firing.
+Quit it from the Dock on macOS, the system tray area or Task Manager on Windows, or by
+stopping the process on Linux.
+
+## Where your data lives
+
+| Platform | Location |
+| --- | --- |
+| macOS | `~/Library/Application Support/CronRunner` |
+| Windows | `%APPDATA%\CronRunner` |
+| Linux | `$XDG_DATA_HOME/cronrunner`, or `~/.local/share/cronrunner` |
+
+That folder holds your jobs database, your settings including any API key, and the logs. None
+of it is sent anywhere. Deleting that folder resets CronRunner completely.
+
+## Uninstalling
+
+Delete the application, then delete the data folder above. On Linux, also remove
+`~/.local/bin/cronrunner` and `~/.local/share/applications/cronrunner.desktop`. If you turned
+on start at login, switch it off in Settings first, or remove the entry by hand:
+
+| Platform | Entry |
+| --- | --- |
+| macOS | `~/Library/LaunchAgents/com.cronrunner.daemon.plist` |
+| Linux | `~/.config/systemd/user/cronrunner.service` |
+| Windows | Scheduled task named `CronRunner` |

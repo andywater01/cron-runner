@@ -1,88 +1,85 @@
-# CronRunner
+<div align="center">
+  <img src="assets/icon/icon.svg" width="96" alt="">
+  <h1>CronRunner</h1>
+  <p>Schedule and run jobs on your own machine. Describe what you want in plain English and an LLM drafts the command and cron schedule for you to review.</p>
+</div>
 
-A modern, cross-platform manager for scheduled jobs on your own machine. Describe a task in
-plain English, let an LLM draft the command and schedule, review it, and CronRunner runs it at
-the right time. macOS, Windows and Linux, from one codebase and one self-contained binary.
+---
 
-It does **not** touch your system crontab. CronRunner ships its own scheduler so the same job
-definition behaves identically everywhere, including Windows, which has no cron.
+CronRunner is a desktop app for the scheduled tasks you keep meaning to set up: nightly
+backups, weekly cleanups, a script that has to run every weekday at 8am. You describe the task
+the way you would to a person, review the command it drafts, and it runs on your machine at the
+right time.
+
+It does not touch your system crontab. CronRunner ships its own scheduler, so the same job
+behaves identically on macOS, Windows and Linux, including Windows, which has no cron at all.
+
+## Download
+
+Version **0.1.0**. Full instructions, including how to get past the unsigned-app warnings, are
+in [docs/INSTALL.md](docs/INSTALL.md).
+
+| Platform | Download |
+| --- | --- |
+| macOS, Apple silicon | [CronRunner-0.1.0-macos-arm64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.0/CronRunner-0.1.0-macos-arm64.dmg) |
+| macOS, Intel | [CronRunner-0.1.0-macos-x64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.0/CronRunner-0.1.0-macos-x64.dmg) |
+| Windows, 64-bit | [CronRunner-0.1.0-windows-x64.exe](https://github.com/andywater01/cron-runner/releases/download/v0.1.0/CronRunner-0.1.0-windows-x64.exe) |
+| Linux, 64-bit | [CronRunner-0.1.0-linux-x64.tar.gz](https://github.com/andywater01/cron-runner/releases/download/v0.1.0/CronRunner-0.1.0-linux-x64.tar.gz) |
+
+Each download is one self-contained app. There is no runtime to install alongside it and no
+account to create. The newest version is always on the
+[releases page](https://github.com/andywater01/cron-runner/releases/latest).
 
 ## What it does
 
 - **Describe a job in plain English.** "Back up ~/Documents to ~/Backups every night at 2am"
-  becomes a real command and cron expression you review before saving, with warnings for
-  anything destructive.
-- **See everything at a glance.** Every job shows its schedule in English, when it next runs,
-  and how the last run went.
-- **Watch runs happen.** stdout and stderr stream live while a job runs, and every run keeps
-  its output, exit code and duration.
-- **Fix failures.** Ask the AI why a run failed and apply the suggested command.
-- **Stay in control.** Enable, disable, run now, kill, set timeouts, working directories,
+  becomes a real command and a cron expression, with warnings for anything destructive, which
+  you review and edit before saving. Refine it by asking for changes.
+- **See everything at a glance.** Every job shows its schedule in plain English, when it runs
+  next, and how the last run went.
+- **Watch runs happen.** Output streams live while a job runs, including a run already in
+  progress when you open it. Every run keeps its output, exit code and duration.
+- **Fix failures.** Ask why a run failed and apply the suggested command.
+- **Stay in control.** Enable, disable, run now, kill, and set timeouts, working directories,
   environment variables and per-job timezones.
 
-Your jobs, run history and API key never leave the machine. The only outbound traffic is your
-own calls to OpenAI or Anthropic.
+## Local and private
 
-## Install
+Your jobs, run history and API key never leave your machine. There is no CronRunner server, no
+account, and no telemetry. The only outbound traffic is your own calls to OpenAI or Anthropic,
+with your own key, and only when you use the AI features. Everything else works without one.
 
-Download the binary for your platform, or build it yourself (below), then run it:
+The daemon runs shell commands as you, so it is deliberately reachable only from your machine:
+it binds to `127.0.0.1` and rejects any request from another origin, which blocks the
+cross-site attack a local server is otherwise open to. Commands drafted by the LLM are always
+shown for review and never run without you saving the job.
 
-```bash
-./cronrunner --open      # starts the daemon and opens the UI
-```
+## Building it yourself
 
-It listens on <http://127.0.0.1:4747> and stores its data in:
-
-| Platform | Location |
-| --- | --- |
-| macOS | `~/Library/Application Support/CronRunner` |
-| Windows | `%APPDATA%\CronRunner` |
-| Linux | `$XDG_DATA_HOME/cronrunner` or `~/.local/share/cronrunner` |
-
-Jobs only run while CronRunner is running. Turn on **Start at login** in Settings so it comes
-back after a reboot (a launch agent on macOS, a systemd user service on Linux, a logon task on
-Windows).
-
-To use the AI features, add an OpenAI or Anthropic API key in Settings. Everything else works
-without one.
-
-## Build from source
-
-Requires [Bun](https://bun.sh) 1.3 or newer.
+See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Short version, with [Bun](https://bun.sh)
+installed:
 
 ```bash
+git clone https://github.com/andywater01/cron-runner.git
+cd cron-runner
 bun install
-bun run compile      # -> apps/server/dist/cronrunner, self-contained
-bun run release      # -> all four platform binaries
-```
-
-## Development
-
-```bash
 bun run dev:server   # API on http://127.0.0.1:4747
-bun run dev:web      # UI on http://localhost:5173, proxies /api
-bun run typecheck && bun test && bun run lint
+bun run dev:web      # UI on http://localhost:5173
 ```
-
-Set `CRONRUNNER_DATA_DIR=./.cronrunner` while developing to keep your real data untouched. The
-test suite isolates itself automatically.
 
 ## Stack
 
-Bun · TypeScript · Hono · croner · bun:sqlite · React 19 · Vite · Tailwind 4 · TanStack Query ·
-zod · @anthropic-ai/sdk · openai
+Bun, TypeScript, Hono, croner, bun:sqlite, React 19, Vite, Tailwind 4, TanStack Query, zod, and
+the official OpenAI and Anthropic SDKs.
 
 ## Docs
 
-- `docs/PRD.md` — what and why
-- `docs/ARCHITECTURE.md` — how it fits together, security model, packaging
-- `docs/DESIGN.md` — UI system and page specs
-- `docs/API.md` — HTTP endpoints
-- `docs/PLAN.md` — the build plan, with what each phase verified
-
-## Security
-
-The daemon runs shell commands as you, so it is deliberately reachable only from this machine:
-it binds to 127.0.0.1 and rejects any API request whose `Origin` is not a loopback host, which
-blocks the cross-site attack a localhost daemon is otherwise open to. Commands drafted by the
-LLM are always shown for review and are never executed without you saving the job.
+| Document | What it covers |
+| --- | --- |
+| [INSTALL.md](docs/INSTALL.md) | Installing and first run, per platform |
+| [DEVELOPMENT.md](docs/DEVELOPMENT.md) | Running from source, tests, building releases |
+| [PRD.md](docs/PRD.md) | What the product is and is not |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it fits together, security model, packaging |
+| [DESIGN.md](docs/DESIGN.md) | UI system and page specs |
+| [API.md](docs/API.md) | HTTP endpoints |
+| [PLAN.md](docs/PLAN.md) | How it was built, and what each phase verified |
