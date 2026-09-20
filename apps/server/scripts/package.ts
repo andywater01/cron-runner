@@ -16,7 +16,15 @@
  * platforms come out plain. The release workflow builds each on its own runner, which is
  * what the published downloads come from. Run `bun run package` from the repo root.
  */
-import { chmodSync, cpSync, mkdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  mkdirSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import rootPackage from "../../../package.json" with { type: "json" };
 
@@ -30,11 +38,26 @@ const ICON_DIR = join(ROOT, "assets", "icon");
 const BUNDLE_ID = "com.cronrunner.app";
 
 async function run(cmd: string[], cwd = ROOT): Promise<void> {
-  const proc = Bun.spawn(cmd, { cwd, stdout: "ignore", stderr: "pipe", stdin: "ignore" });
-  const stderr = await new Response(proc.stderr).text();
+  const proc = Bun.spawn(cmd, { cwd, stdout: "pipe", stderr: "pipe", stdin: "ignore" });
+  const [stdout, stderr] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
   if ((await proc.exited) !== 0) {
-    throw new Error(`${cmd.join(" ")}\n${stderr.trim()}`);
+    throw new Error(`${cmd.join(" ")}\n${`${stderr}\n${stdout}`.trim()}`);
   }
+}
+
+/** Total bytes of a directory tree, following the tree but not symlinks. */
+function treeBytes(dir: string): number {
+  let total = 0;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isSymbolicLink()) continue;
+    if (entry.isDirectory()) total += treeBytes(full);
+    else total += statSync(full).size;
+  }
+  return total;
 }
 
 function mb(path: string): string {
@@ -117,6 +140,12 @@ async function buildDmg(appPath: string, dmgPath: string): Promise<void> {
   cpSync(appPath, join(staging, "CronRunner.app"), { recursive: true });
   await run(["ln", "-s", "/Applications", join(staging, "Applications")]);
   rmSync(dmgPath, { force: true });
+
+  // Size and filesystem are set explicitly. Left to itself hdiutil picks APFS and computes a
+  // size with too little slack for its own overhead, which fails as "No space left on device"
+  // — about space inside the image, not on the host disk.
+  const sizeMb = Math.ceil(treeBytes(staging) / 1_000_000) + 80;
+
   await run([
     "hdiutil",
     "create",
@@ -124,6 +153,10 @@ async function buildDmg(appPath: string, dmgPath: string): Promise<void> {
     `CronRunner ${VERSION}`,
     "-srcfolder",
     staging,
+    "-fs",
+    "HFS+",
+    "-size",
+    `${sizeMb}m`,
     "-ov",
     "-format",
     "UDZO",
