@@ -1,6 +1,6 @@
 import type { ApiError } from "@cronrunner/shared";
 import type { Context } from "hono";
-import type { z } from "zod";
+import { z } from "zod/v4";
 
 export class HttpError extends Error {
   constructor(
@@ -37,7 +37,12 @@ export async function parseBody<S extends z.ZodTypeAny>(
   }
   const result = schema.safeParse(raw);
   if (!result.success) {
-    throw new HttpError(400, "validation_error", "Invalid request body", result.error.flatten());
+    throw new HttpError(
+      400,
+      "validation_error",
+      "Invalid request body",
+      z.flattenError(result.error),
+    );
   }
   return result.data;
 }

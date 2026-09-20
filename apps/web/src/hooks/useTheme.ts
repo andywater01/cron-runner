@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-type Theme = "system" | "light" | "dark";
+export type Theme = "system" | "light" | "dark";
 const KEY = "cronrunner.theme";
 
 export function useTheme() {

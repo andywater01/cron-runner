@@ -4,6 +4,7 @@
  * so it generates commands that actually work on this computer.
  */
 import { homedir } from "node:os";
+import type { AiGenerateJobInput, Job, Run } from "@cronrunner/shared";
 
 export function systemContext(): string {
   const platform =
@@ -47,3 +48,30 @@ export const EXPLAIN_CRON_SYSTEM_PROMPT = `Explain the given cron expression in 
 
 Machine context:
 `;
+
+// ---------------------------------------------------------------------------
+// User message builders (shared by both providers so the wording never drifts)
+// ---------------------------------------------------------------------------
+
+/** The user turn for a fresh draft, or for editing the draft already on screen. */
+export function refinementUserMessage(input: AiGenerateJobInput): string {
+  if (!input.currentDraft) return input.prompt;
+  return [
+    "Current draft (edit this rather than starting over):",
+    JSON.stringify(input.currentDraft, null, 2),
+    "",
+    `Requested change: ${input.prompt}`,
+  ].join("\n");
+}
+
+/** The user turn describing a failed run, with output tails kept small. */
+export function diagnoseUserMessage(job: Job, run: Run): string {
+  return [
+    `Job: ${job.name}`,
+    `Shell: ${job.shell}  cwd: ${job.cwd ?? "(home)"}`,
+    `Command:\n${job.command}`,
+    `Exit code: ${run.exitCode}  status: ${run.status}`,
+    `--- stdout (tail) ---\n${run.stdout.slice(-8000)}`,
+    `--- stderr (tail) ---\n${run.stderr.slice(-8000)}`,
+  ].join("\n\n");
+}

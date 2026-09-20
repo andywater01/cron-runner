@@ -7,7 +7,8 @@
 
 import { LlmProviderSchema, UpdateSettingsInputSchema } from "@cronrunner/shared";
 import { Hono } from "hono";
-import { z } from "zod";
+import { z } from "zod/v4";
+import { friendlyLlmError } from "../llm/errors";
 import { getLlmClient } from "../llm/provider";
 import { getSettingsResponse, updateSettings } from "../settings";
 import { HttpError, parseBody } from "./util";
@@ -34,6 +35,6 @@ settingsRoute.post("/test-llm", async (c) => {
     await getLlmClient(input).testConnection();
     return c.json({ ok: true });
   } catch (err) {
-    throw new HttpError(400, "llm_test_failed", err instanceof Error ? err.message : String(err));
+    throw new HttpError(400, "llm_test_failed", friendlyLlmError(input.provider, err));
   }
 });

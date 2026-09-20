@@ -1,11 +1,11 @@
 /**
- * OpenAI implementation using the official SDK with structured outputs (zod).
+ * OpenAI implementation, using the Responses API.
  *
- * Uses the Responses API with `zodTextFormat` for JSON that matches AiJobDraftSchema.
- * Default model: see DEFAULT_MODELS in @cronrunner/shared.
+ * Structured output is requested with an explicit JSON Schema (see `./jsonSchema.ts`) rather
+ * than the SDK's `zodTextFormat` helper, so both providers share one code path. The reply is
+ * validated here with the same zod schema that produced the JSON Schema.
  *
- * TODO(plan §5.2): verify against the installed openai package version; the helper import path is
- * `openai/helpers/zod` and the parse method is `client.responses.parse`. Map errors to friendly messages.
+ * Model default: see DEFAULT_MODELS.
  */
 
 import type {
@@ -17,17 +17,23 @@ import type {
 } from "@cronrunner/shared";
 import { AiDiagnoseRunResponseSchema, AiJobDraftSchema } from "@cronrunner/shared";
 import OpenAI from "openai";
-import { zodTextFormat } from "openai/helpers/zod";
+import { toProviderJsonSchema } from "./jsonSchema";
 import {
   DIAGNOSE_SYSTEM_PROMPT,
+  diagnoseUserMessage,
   EXPLAIN_CRON_SYSTEM_PROMPT,
   JOB_BUILDER_SYSTEM_PROMPT,
+  refinementUserMessage,
   systemContext,
 } from "./prompts";
 import type { LlmClient } from "./provider";
 
+const DRAFT_SCHEMA = toProviderJsonSchema(AiJobDraftSchema);
+const DIAGNOSIS_SCHEMA = toProviderJsonSchema(AiDiagnoseRunResponseSchema);
+
 export class OpenAiProvider implements LlmClient {
   private client: OpenAI;
+
   constructor(
     apiKey: string,
     private model: string,
@@ -35,40 +41,50 @@ export class OpenAiProvider implements LlmClient {
     this.client = new OpenAI({ apiKey });
   }
 
-  async generateJobDraft(input: AiGenerateJobInput): Promise<AiJobDraft> {
-    const userText = input.currentDraft
-      ? `Current draft (edit this rather than starting over):\n${JSON.stringify(input.currentDraft, null, 2)}\n\nRequested change: ${input.prompt}`
-      : input.prompt;
-
-    const response = await this.client.responses.parse({
+  private async structured(args: {
+    instructions: string;
+    input: OpenAI.Responses.ResponseInput;
+    schema: Record<string, unknown>;
+    name: string;
+  }): Promise<string> {
+    const response = await this.client.responses.create({
       model: this.model,
-      instructions: JOB_BUILDER_SYSTEM_PROMPT + systemContext(),
-      input: [
-        ...input.history.map((m) => ({ role: m.role, content: m.content })),
-        { role: "user" as const, content: userText },
-      ],
-      text: { format: zodTextFormat(AiJobDraftSchema, "job_draft") },
+      instructions: args.instructions,
+      input: args.input,
+      text: {
+        format: {
+          type: "json_schema",
+          name: args.name,
+          schema: args.schema,
+          strict: true,
+        },
+      },
     });
-    if (!response.output_parsed) throw new Error("Model returned no structured output");
-    return response.output_parsed;
+    return response.output_text;
+  }
+
+  async generateJobDraft(input: AiGenerateJobInput): Promise<AiJobDraft> {
+    const messages: OpenAI.Responses.ResponseInput = [
+      ...input.history.map((m) => ({ role: m.role, content: m.content })),
+      { role: "user" as const, content: refinementUserMessage(input) },
+    ];
+    const text = await this.structured({
+      instructions: JOB_BUILDER_SYSTEM_PROMPT + systemContext(),
+      input: messages,
+      schema: DRAFT_SCHEMA,
+      name: "job_draft",
+    });
+    return AiJobDraftSchema.parse(JSON.parse(text));
   }
 
   async diagnoseRun(job: Job, run: Run): Promise<AiDiagnoseRunResponse> {
-    const response = await this.client.responses.parse({
-      model: this.model,
+    const text = await this.structured({
       instructions: DIAGNOSE_SYSTEM_PROMPT + systemContext(),
-      input: [
-        `Job: ${job.name}`,
-        `Shell: ${job.shell}  cwd: ${job.cwd ?? "(home)"}`,
-        `Command:\n${job.command}`,
-        `Exit code: ${run.exitCode}  status: ${run.status}`,
-        `--- stdout (tail) ---\n${run.stdout.slice(-8000)}`,
-        `--- stderr (tail) ---\n${run.stderr.slice(-8000)}`,
-      ].join("\n\n"),
-      text: { format: zodTextFormat(AiDiagnoseRunResponseSchema, "diagnosis") },
+      input: [{ role: "user" as const, content: diagnoseUserMessage(job, run) }],
+      schema: DIAGNOSIS_SCHEMA,
+      name: "run_diagnosis",
     });
-    if (!response.output_parsed) throw new Error("Model returned no structured output");
-    return response.output_parsed;
+    return AiDiagnoseRunResponseSchema.parse(JSON.parse(text));
   }
 
   async explainCron(schedule: string): Promise<string> {

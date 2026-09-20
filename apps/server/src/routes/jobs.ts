@@ -14,7 +14,7 @@
 import type { Job, JobWithStatus } from "@cronrunner/shared";
 import { CreateJobInputSchema, UpdateJobInputSchema } from "@cronrunner/shared";
 import { Hono } from "hono";
-import { z } from "zod";
+import { z } from "zod/v4";
 import * as db from "../db/db";
 import { publish } from "../events";
 import { executeJob, isJobRunning } from "../scheduler/executor";

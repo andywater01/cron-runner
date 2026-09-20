@@ -3,7 +3,7 @@
  * The server validates request bodies with these; the web app derives its types from them.
  * Keep this file dependency-free apart from zod.
  */
-import { z } from "zod";
+import { z } from "zod/v4";
 
 // ---------------------------------------------------------------------------
 // Primitives
@@ -57,8 +57,8 @@ export const JobSchema = z.object({
   tags: z.array(z.string().min(1).max(40)).default([]),
   /** Optional: how the job was created. Purely informational. */
   source: z.enum(["manual", "ai"]).default("manual"),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
 });
 export type Job = z.infer<typeof JobSchema>;
 
@@ -72,13 +72,13 @@ export type UpdateJobInput = z.infer<typeof UpdateJobInputSchema>;
 
 /** A job plus derived runtime info the list/detail views need. */
 export const JobWithStatusSchema = JobSchema.extend({
-  nextRunAt: z.string().datetime().nullable(),
+  nextRunAt: z.iso.datetime().nullable(),
   lastRun: z
     .object({
       id: RunIdSchema,
       status: RunStatusSchema,
-      startedAt: z.string().datetime(),
-      finishedAt: z.string().datetime().nullable(),
+      startedAt: z.iso.datetime(),
+      finishedAt: z.iso.datetime().nullable(),
       exitCode: z.number().int().nullable(),
     })
     .nullable(),
@@ -97,8 +97,8 @@ export const RunSchema = z.object({
   jobId: JobIdSchema,
   trigger: RunTriggerSchema,
   status: RunStatusSchema,
-  startedAt: z.string().datetime(),
-  finishedAt: z.string().datetime().nullable(),
+  startedAt: z.iso.datetime(),
+  finishedAt: z.iso.datetime().nullable(),
   exitCode: z.number().int().nullable(),
   /** Combined, capped output. See PRD for the cap (default 1 MB per stream). */
   stdout: z.string(),
@@ -148,7 +148,11 @@ export const SettingsResponseSchema = SettingsSchema.extend({
 });
 export type SettingsResponse = z.infer<typeof SettingsResponseSchema>;
 
-export const UpdateSettingsInputSchema = SettingsSchema.deepPartial().extend({
+export const UpdateSettingsInputSchema = z.object({
+  llm: z.object({ provider: LlmProviderSchema, model: z.string().nullable() }).partial().optional(),
+  runRetentionPerJob: z.number().int().min(10).max(10_000).optional(),
+  defaultShell: ShellSchema.optional(),
+  theme: z.enum(["system", "light", "dark"]).optional(),
   /** Provide a key to set it; empty string clears it; omit to leave unchanged. */
   openaiApiKey: z.string().optional(),
   anthropicApiKey: z.string().optional(),
@@ -245,6 +249,6 @@ export const ServerEventSchema = z.discriminatedUnion("type", [
   }),
   z.object({ type: z.literal("job.changed"), jobId: JobIdSchema }),
   z.object({ type: z.literal("job.deleted"), jobId: JobIdSchema }),
-  z.object({ type: z.literal("scheduler.tick"), at: z.string().datetime() }),
+  z.object({ type: z.literal("scheduler.tick"), at: z.iso.datetime() }),
 ]);
 export type ServerEvent = z.infer<typeof ServerEventSchema>;

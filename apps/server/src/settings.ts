@@ -58,23 +58,28 @@ export function getSettingsResponse(): SettingsResponse {
   };
 }
 
+/**
+ * Merge a patch into the stored settings. Keys are handled separately from the rest:
+ * omitting one leaves it untouched, an empty string clears it.
+ */
 export function updateSettings(input: UpdateSettingsInput): SettingsResponse {
   const current = load();
   const { openaiApiKey, anthropicApiKey, ...patch } = input;
-  const next: StoredSettings = {
+
+  // Validate the public settings on their own; the keys are not part of that schema.
+  const merged = SettingsSchema.parse({
     ...current,
     ...patch,
     llm: { ...current.llm, ...(patch.llm ?? {}) },
+  });
+
+  const next: StoredSettings = {
+    ...merged,
+    openaiApiKey: openaiApiKey === undefined ? current.openaiApiKey : openaiApiKey || undefined,
+    anthropicApiKey:
+      anthropicApiKey === undefined ? current.anthropicApiKey : anthropicApiKey || undefined,
   };
-  if (openaiApiKey !== undefined) next.openaiApiKey = openaiApiKey || undefined;
-  if (anthropicApiKey !== undefined) next.anthropicApiKey = anthropicApiKey || undefined;
-  save(SettingsSchema.parse(next) as StoredSettings & typeof next);
-  // SettingsSchema.parse strips the key fields; put them back.
-  cache = {
-    ...SettingsSchema.parse(next),
-    openaiApiKey: next.openaiApiKey,
-    anthropicApiKey: next.anthropicApiKey,
-  };
-  save(cache);
+
+  save(next);
   return getSettingsResponse();
 }

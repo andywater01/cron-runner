@@ -1,16 +1,14 @@
 /**
- * Anthropic implementation using the official SDK with structured outputs (zod).
+ * Anthropic implementation.
  *
- * Reference: https://docs.claude.com/en/docs/build-with-claude/structured-outputs
- * - `client.messages.parse` + `zodOutputFormat` returns `parsed_output` typed by the zod schema.
- * - Thinking is adaptive by default on claude-opus-5; no `thinking` param is needed.
- * - Default model: claude-opus-5 (see DEFAULT_MODELS). Do NOT append date suffixes to model ids.
+ * Structured output is requested with an explicit JSON Schema (see `./jsonSchema.ts`) rather
+ * than the SDK's `zodOutputFormat` helper, so both providers share one code path. The reply is
+ * validated here with the same zod schema that produced the JSON Schema.
  *
- * TODO(plan §5.2): finish diagnoseRun / explainCron / testConnection, add friendly error mapping
- * (401 -> "Invalid API key", 429 -> "Rate limited, try again", network -> "Cannot reach api.anthropic.com").
+ * Model default: `claude-opus-5` (see DEFAULT_MODELS). Model ids carry no date suffix.
+ * Thinking is adaptive by default on this model, so no `thinking` parameter is sent.
  */
 import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type {
   AiDiagnoseRunResponse,
   AiGenerateJobInput,
@@ -19,16 +17,23 @@ import type {
   Run,
 } from "@cronrunner/shared";
 import { AiDiagnoseRunResponseSchema, AiJobDraftSchema } from "@cronrunner/shared";
+import { toProviderJsonSchema } from "./jsonSchema";
 import {
   DIAGNOSE_SYSTEM_PROMPT,
+  diagnoseUserMessage,
   EXPLAIN_CRON_SYSTEM_PROMPT,
   JOB_BUILDER_SYSTEM_PROMPT,
+  refinementUserMessage,
   systemContext,
 } from "./prompts";
 import type { LlmClient } from "./provider";
 
+const DRAFT_SCHEMA = toProviderJsonSchema(AiJobDraftSchema);
+const DIAGNOSIS_SCHEMA = toProviderJsonSchema(AiDiagnoseRunResponseSchema);
+
 export class AnthropicProvider implements LlmClient {
   private client: Anthropic;
+
   constructor(
     apiKey: string,
     private model: string,
@@ -36,50 +41,54 @@ export class AnthropicProvider implements LlmClient {
     this.client = new Anthropic({ apiKey });
   }
 
+  /** Collect the plain text of a response. */
+  private static text(message: Anthropic.Message): string {
+    return message.content
+      .filter((block): block is Anthropic.TextBlock => block.type === "text")
+      .map((block) => block.text)
+      .join("");
+  }
+
+  /** Ask for JSON matching `schema` and return the raw text. */
+  private async structured(args: {
+    system: string;
+    messages: Anthropic.MessageParam[];
+    schema: Record<string, unknown>;
+  }): Promise<string> {
+    const response = await this.client.messages.create({
+      model: this.model,
+      max_tokens: 8192,
+      system: args.system,
+      messages: args.messages,
+      // Anthropic's json_schema format takes the schema only; it has no name field.
+      output_config: { format: { type: "json_schema", schema: args.schema } },
+    });
+    if (response.stop_reason === "refusal") {
+      throw new Error("The model declined to answer this request.");
+    }
+    return AnthropicProvider.text(response);
+  }
+
   async generateJobDraft(input: AiGenerateJobInput): Promise<AiJobDraft> {
     const messages: Anthropic.MessageParam[] = [
       ...input.history.map((m) => ({ role: m.role, content: m.content }) as Anthropic.MessageParam),
+      { role: "user", content: refinementUserMessage(input) },
     ];
-    const userText = input.currentDraft
-      ? `Current draft (edit this rather than starting over):\n${JSON.stringify(input.currentDraft, null, 2)}\n\nRequested change: ${input.prompt}`
-      : input.prompt;
-    messages.push({ role: "user", content: userText });
-
-    const response = await this.client.messages.parse({
-      model: this.model,
-      max_tokens: 4096,
+    const text = await this.structured({
       system: JOB_BUILDER_SYSTEM_PROMPT + systemContext(),
       messages,
-      output_config: { format: zodOutputFormat(AiJobDraftSchema) },
+      schema: DRAFT_SCHEMA,
     });
-    if (!response.parsed_output) {
-      throw new Error(`Model returned no structured output (stop_reason: ${response.stop_reason})`);
-    }
-    return response.parsed_output;
+    return AiJobDraftSchema.parse(JSON.parse(text));
   }
 
   async diagnoseRun(job: Job, run: Run): Promise<AiDiagnoseRunResponse> {
-    const response = await this.client.messages.parse({
-      model: this.model,
-      max_tokens: 4096,
+    const text = await this.structured({
       system: DIAGNOSE_SYSTEM_PROMPT + systemContext(),
-      messages: [
-        {
-          role: "user",
-          content: [
-            `Job: ${job.name}`,
-            `Shell: ${job.shell}  cwd: ${job.cwd ?? "(home)"}`,
-            `Command:\n${job.command}`,
-            `Exit code: ${run.exitCode}  status: ${run.status}`,
-            `--- stdout (tail) ---\n${run.stdout.slice(-8000)}`,
-            `--- stderr (tail) ---\n${run.stderr.slice(-8000)}`,
-          ].join("\n\n"),
-        },
-      ],
-      output_config: { format: zodOutputFormat(AiDiagnoseRunResponseSchema) },
+      messages: [{ role: "user", content: diagnoseUserMessage(job, run) }],
+      schema: DIAGNOSIS_SCHEMA,
     });
-    if (!response.parsed_output) throw new Error("Model returned no structured output");
-    return response.parsed_output;
+    return AiDiagnoseRunResponseSchema.parse(JSON.parse(text));
   }
 
   async explainCron(schedule: string): Promise<string> {
@@ -89,10 +98,7 @@ export class AnthropicProvider implements LlmClient {
       system: EXPLAIN_CRON_SYSTEM_PROMPT + systemContext(),
       messages: [{ role: "user", content: schedule }],
     });
-    return response.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("");
+    return AnthropicProvider.text(response);
   }
 
   async testConnection(): Promise<void> {
