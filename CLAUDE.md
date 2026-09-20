@@ -1,0 +1,29 @@
+# CronRunner
+
+Cross-platform local cron job manager: Bun daemon (Hono API + croner scheduler + SQLite) serving a React/Tailwind UI, with OpenAI/Anthropic-assisted job creation.
+
+## Read first
+- `docs/PLAN.md` — the phased build plan. Work through it in order. Each phase has a verify step.
+- `docs/PRD.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN.md`, `docs/API.md`.
+
+## Commands
+```
+bun install
+bun run dev:server          # API on 127.0.0.1:4747 (bun --watch)
+bun run dev:web             # Vite on 5173, proxies /api to the server
+bun run typecheck           # all packages
+bun test                    # server tests
+bun run lint / bun run format
+bun run build               # web -> apps/server/public
+bun run compile             # single binary -> apps/server/dist/cronrunner
+```
+Use `CRONRUNNER_DATA_DIR=./.cronrunner` in development to keep the real app-data folder clean.
+
+## Rules
+- Shared types/schemas live only in `packages/shared/src/schemas.ts`. Server and web import from `@cronrunner/shared`.
+- All SQL in `apps/server/src/db/db.ts`. All LLM SDK calls in `apps/server/src/llm/`.
+- Routes validate bodies with `parseBody(c, Schema)` and throw `HttpError` for expected failures.
+- Server binds to 127.0.0.1 only. Never change `HOST`.
+- UI uses the tokens/utilities in `apps/web/src/index.css` and primitives in `src/components/ui`. No raw hex colors in components.
+- Default LLM models: Anthropic `claude-opus-5`, OpenAI `gpt-5` (see `DEFAULT_MODELS`). Don't append date suffixes to Anthropic model ids.
+- Run typecheck + tests before declaring a phase done. Commit per phase: `phase N: <title>`.
