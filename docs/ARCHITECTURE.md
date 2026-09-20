@@ -102,12 +102,40 @@ See `packages/shared/src/schemas.ts` (authoritative) and `apps/server/src/db/sch
 
 - Dev: `bun run dev:server` (port 4747, `--watch`) and `bun run dev:web` (Vite on 5173, proxies `/api`).
 - Prod: `bun run build` → `apps/web` builds into `apps/server/public/`; the server serves it with SPA fallback.
-- Single binary: `bun run compile` → `apps/server/dist/cronrunner`. Phase 7 of the plan embeds `public/` into the binary (Bun supports importing files with `with { type: "file" }` for embedding) and adds `--open` to launch the browser.
+- Single binary: `bun run compile` runs the web build, then `scripts/embed.ts`, then
+  `bun build --compile`. `embed.ts` writes `src/embedded.gen.ts`, importing each built asset
+  with `with { type: "file" }` so the bundler pulls them into the executable; `static.ts`
+  serves from there when present and from `public/` otherwise. The committed
+  `embedded.gen.ts` is an empty placeholder so a clean checkout type-checks — the generated
+  version is a build artifact and should not be committed.
+- `bun run release` cross-compiles macOS arm64/x64, Linux x64 and Windows x64 into
+  `apps/server/dist/`. Each binary is self-contained (~60-110 MB, Bun runtime included).
+- `--open` launches the default browser once the server is listening.
+
+## Logging
+
+`logging.ts` tees `console.log/warn/error` to `DATA_DIR/logs/cronrunner.log`, rotating at 5 MB
+and keeping 3 generations. The daemon usually runs with no terminal attached, so this is the
+only record of scheduler and startup activity. Job output is not written here; it belongs to
+the run, in the database.
+
+## Missed runs
+
+At startup the scheduler computes which enabled jobs had a run fall due while the daemon was
+stopped, and reports them (log line, `SystemInfo.missedRuns`, dashboard banner). They are
+never replayed: re-running a backup or a cleanup hours late can be worse than skipping it.
 
 ## Security model
 
 - Listens on 127.0.0.1 only; never change `HOST`.
-- No authentication in v1 because only local processes can connect. Document clearly. (Optional hardening in Phase 8: random token in the data dir, sent as a header by the UI.)
+- **Origin guard** (`routes/guard.ts`): any `/api` request whose `Origin` header is not a
+  loopback host is rejected with 403. Binding to localhost stops other machines but not the
+  browser on this one — a site you visit can send a "simple" cross-origin POST with no CORS
+  preflight, and for a daemon that executes shell commands that is remote code execution.
+  Browsers always attach `Origin` cross-origin, so this check blocks it. Requests with no
+  `Origin` (curl, scripts) pass, because a process that can run curl can already run commands.
+- A shared token was considered and rejected: it adds a secret to store, fetch and leak, and
+  protects against nothing the origin check misses for browser-borne attacks.
 - API keys never leave the machine except to their own provider. Never logged.
 - LLM output is a draft. It is displayed verbatim and saved only on explicit user action; it is never executed automatically.
 - Commands run with the daemon user's privileges. That is the point of the tool; the PRD documents it.

@@ -6,7 +6,6 @@ import { DashboardPage } from "@/pages/DashboardPage";
 import { JobDetailPage } from "@/pages/JobDetailPage";
 import { JobEditorPage } from "@/pages/JobEditorPage";
 import { JobsPage } from "@/pages/JobsPage";
-import { KitchenSinkPage } from "@/pages/KitchenSinkPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 
 export function App() {
@@ -21,8 +20,6 @@ export function App() {
         <Route path="jobs/:id/edit" element={<JobEditorPage />} />
         <Route path="activity" element={<ActivityPage />} />
         <Route path="settings" element={<SettingsPage />} />
-        {/* Dev-only visual QA route; removed in Phase 8. */}
-        <Route path="_kitchen-sink" element={<KitchenSinkPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

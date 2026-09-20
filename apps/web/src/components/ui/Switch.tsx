@@ -1,10 +1,11 @@
 import clsx from "clsx";
+import { useId } from "react";
 
 export interface SwitchProps {
   checked: boolean;
   onChange: (next: boolean) => void;
   disabled?: boolean;
-  /** Required when the switch has no visible label. */
+  /** Names the control. Shown on screen only when `showLabel` is set. */
   label: string;
   /** Show the label text next to the control instead of only to screen readers. */
   showLabel?: boolean;
@@ -12,6 +13,11 @@ export interface SwitchProps {
   className?: string;
 }
 
+/**
+ * A switch is a `<button role="switch">`, not a checkbox, so a wrapping `<label>` does NOT
+ * give it an accessible name — labels only name true form controls. The name therefore comes
+ * from `aria-labelledby` when the text is visible, and `aria-label` when it is not.
+ */
 export function Switch({
   checked,
   onChange,
@@ -21,16 +27,19 @@ export function Switch({
   size = "md",
   className,
 }: SwitchProps) {
+  const labelId = useId();
   const track = size === "sm" ? "h-4 w-7" : "h-5 w-9";
   const knob = size === "sm" ? "size-3" : "size-4";
   const shift = size === "sm" ? "translate-x-3" : "translate-x-4";
+
   return (
-    <label className={clsx("inline-flex items-center gap-2", disabled && "opacity-50", className)}>
+    <span className={clsx("inline-flex items-center gap-2", disabled && "opacity-50", className)}>
       <button
         type="button"
         role="switch"
         aria-checked={checked}
         aria-label={showLabel ? undefined : label}
+        aria-labelledby={showLabel ? labelId : undefined}
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={clsx(
@@ -47,7 +56,18 @@ export function Switch({
           )}
         />
       </button>
-      {showLabel && <span className="text-sm text-default">{label}</span>}
-    </label>
+      {showLabel && (
+        <button
+          type="button"
+          id={labelId}
+          disabled={disabled}
+          onClick={() => onChange(!checked)}
+          tabIndex={-1}
+          className="cursor-pointer text-left text-sm text-default disabled:cursor-not-allowed"
+        >
+          {label}
+        </button>
+      )}
+    </span>
   );
 }

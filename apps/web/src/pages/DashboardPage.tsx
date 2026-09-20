@@ -48,6 +48,7 @@ export function DashboardPage() {
   const nextJob = upcoming[0];
   const recent = (runs.data ?? []).slice(0, 10);
   const hasJobs = (jobs.data?.length ?? 0) > 0;
+  const missed = system.data?.missedRuns ?? [];
 
   if (!jobs.isPending && !hasJobs) {
     return (
@@ -92,6 +93,27 @@ export function DashboardPage() {
             : undefined
         }
       />
+
+      {missed.length > 0 && (
+        <div className="mb-5 flex items-start gap-2.5 rounded-card border border-warning/30 bg-warning/10 px-4 py-3">
+          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+          <p className="text-xs leading-relaxed text-default">
+            {missed.length === 1
+              ? `“${missed[0]?.name}” had a run due while CronRunner was not running.`
+              : `${missed.length} jobs had runs due while CronRunner was not running.`}{" "}
+            <span className="text-muted">
+              They were not run again. Turn on “start at login” in{" "}
+              <Link
+                to="/settings"
+                className="font-medium text-accent-600 hover:underline dark:text-accent-300"
+              >
+                Settings
+              </Link>{" "}
+              so this does not happen.
+            </span>
+          </p>
+        </div>
+      )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard

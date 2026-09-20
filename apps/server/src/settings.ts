@@ -3,7 +3,8 @@
  * API keys live here (never in the database, never returned to the client in full).
  * Env vars OPENAI_API_KEY / ANTHROPIC_API_KEY act as fallbacks when no key is stored.
  */
-import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import {
   type LlmProvider,
   type Settings,
@@ -30,6 +31,9 @@ function load(): StoredSettings {
 }
 
 function save(s: StoredSettings): void {
+  // The data directory is created at startup, but not when this module is used on its own
+  // (tests, or a first write after the directory was removed), so make sure it is there.
+  mkdirSync(dirname(SETTINGS_PATH), { recursive: true });
   writeFileSync(SETTINGS_PATH, JSON.stringify(s, null, 2), { mode: 0o600 });
   if (process.platform !== "win32") chmodSync(SETTINGS_PATH, 0o600);
   cache = s;

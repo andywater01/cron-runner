@@ -1,0 +1,3 @@
+[test]
+# Isolate every test run from the developer's real CronRunner data.
+preload = ["./test-setup.ts"]

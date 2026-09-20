@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import * as autostart from "../autostart";
 import { APP_VERSION, DATA_DIR } from "../config";
 import * as db from "../db/db";
-import { isSchedulerRunning } from "../scheduler/scheduler";
+import { getMissedAtStartup, isSchedulerRunning } from "../scheduler/scheduler";
 import { HttpError } from "./util";
 
 export const systemRoute = new Hono();
@@ -22,6 +22,7 @@ systemRoute.get("/", async (c) => {
     schedulerRunning: isSchedulerRunning(),
     jobCount: jobs.length,
     enabledJobCount: jobs.filter((j) => j.enabled).length,
+    missedRuns: getMissedAtStartup(),
     autostart: await autostart.status(),
   };
   return c.json(info);

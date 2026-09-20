@@ -91,6 +91,7 @@ export function ProviderCard({
             <div className="flex-1">
               <Input
                 type={revealed ? "text" : "password"}
+                aria-label={`${provider === "anthropic" ? "Anthropic" : "OpenAI"} API key`}
                 value={draftKey}
                 autoComplete="off"
                 spellCheck={false}

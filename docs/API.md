@@ -5,7 +5,10 @@ Base URL `http://127.0.0.1:4747/api`. JSON in/out. All shapes are defined in `pa
 | Method | Path | Body | Returns |
 |---|---|---|---|
 | GET | /health | | `{ok:true}` |
-| GET | /system | | SystemInfo |
+| GET | /system | | SystemInfo (incl. `missedRuns`, `autostart`) |
+| GET | /system/autostart | | `{supported, enabled, reason?, location?}` |
+| POST | /system/autostart | | enable start at login |
+| DELETE | /system/autostart | | disable start at login |
 | GET | /jobs | | JobWithStatus[] |
 | POST | /jobs | CreateJobInput | JobWithStatus (201) |
 | POST | /jobs/validate-schedule | `{schedule, timezone}` | `{valid, error?, human, next[]}` |
@@ -26,4 +29,14 @@ Base URL `http://127.0.0.1:4747/api`. JSON in/out. All shapes are defined in `pa
 | POST | /ai/diagnose-run | `{runId}` | AiDiagnoseRunResponse |
 | GET | /events | | SSE stream of ServerEvent, event name = `type` |
 
-Error codes used: `invalid_json`, `validation_error`, `invalid_schedule`, `not_found`, `already_running`, `not_running`, `llm_not_configured`, `llm_test_failed`, `internal_error`.
+Error codes used: `invalid_json`, `validation_error`, `invalid_schedule`, `not_found`, `already_running`, `not_running`, `llm_not_configured`, `llm_test_failed`, `llm_error` (502, provider failure with a message safe to show a user), `autostart_failed`, `forbidden_origin` (403, see below), `internal_error`.
+
+## Who may call this API
+
+The daemon listens on 127.0.0.1 only. On top of that, every `/api` request carrying an
+`Origin` header from anywhere other than this machine is rejected with 403 `forbidden_origin`.
+That closes the cross-site request attack a localhost daemon is otherwise open to: a page on
+the public internet can issue a no-preflight POST to `127.0.0.1:4747` and, without this check,
+create a job that runs an arbitrary shell command. Requests with no `Origin` at all (curl,
+scripts) are allowed — anything able to run curl can already run commands directly. See
+`apps/server/src/routes/guard.ts`.

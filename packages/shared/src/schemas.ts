@@ -218,6 +218,13 @@ export const SystemInfoSchema = z.object({
   schedulerRunning: z.boolean(),
   jobCount: z.number().int(),
   enabledJobCount: z.number().int(),
+  /**
+   * Runs that fell due while the daemon was not running. Reported, never replayed —
+   * see the PRD's non-goals. Computed once at startup.
+   */
+  missedRuns: z.array(
+    z.object({ jobId: JobIdSchema, name: z.string(), missedAt: z.iso.datetime() }),
+  ),
   /** Whether this machine can start CronRunner at login, and whether it is set up. */
   autostart: z.object({
     supported: z.boolean(),

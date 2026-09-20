@@ -8,6 +8,7 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { aiRoute } from "./routes/ai";
 import { eventsRoute } from "./routes/events";
+import { originGuard } from "./routes/guard";
 import { jobsRoute } from "./routes/jobs";
 import { runsRoute } from "./routes/runs";
 import { settingsRoute } from "./routes/settings";
@@ -17,6 +18,8 @@ import { apiError, HttpError } from "./routes/util";
 export function createApp() {
   const app = new Hono();
   app.use("*", logger());
+  // Refuse API calls initiated by any other website (see routes/guard.ts).
+  app.use(`${API_PREFIX}/*`, originGuard);
 
   app.onError((err, c) => {
     if (err instanceof HttpError)

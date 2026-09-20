@@ -116,3 +116,38 @@ export function validateSchedule(schedule: string): { valid: boolean; error?: st
     };
   }
 }
+
+/**
+ * Jobs whose next run, computed from when they were last changed, has already passed.
+ * These fired while the daemon was not running. v1 reports them rather than replaying
+ * them: re-running a backup or a cleanup hours late can be worse than skipping it.
+ */
+let missedAtStartup: { jobId: string; name: string; missedAt: string }[] = [];
+
+/** What `findMissedRuns()` returned when the daemon started. */
+export function getMissedAtStartup() {
+  return missedAtStartup;
+}
+
+export function recordMissedAtStartup(missed: { jobId: string; name: string; missedAt: string }[]) {
+  missedAtStartup = missed;
+}
+
+export function findMissedRuns(): { jobId: string; name: string; missedAt: string }[] {
+  const missed: { jobId: string; name: string; missedAt: string }[] = [];
+  for (const job of db.listJobs()) {
+    if (!job.enabled) continue;
+    const last = db.lastRunForJob(job.id);
+    // Look forward from whichever is later: the last run, or the last edit.
+    const since = last ? new Date(last.startedAt) : new Date(job.updatedAt);
+    try {
+      const due = new Cron(job.schedule, { timezone: job.timezone ?? undefined }).nextRun(since);
+      if (due && due.getTime() < Date.now()) {
+        missed.push({ jobId: job.id, name: job.name, missedAt: due.toISOString() });
+      }
+    } catch {
+      // An unparseable schedule is reported elsewhere.
+    }
+  }
+  return missed;
+}

@@ -150,14 +150,20 @@ Dashboard shows the four stat cards, upcoming runs and the recent activity feed;
 
 ## Phase 8 — Hardening and polish
 
-- [ ] **8.1** Tests: executor (success/fail/timeout/kill/output cap), DAL (prune, orphan marking), routes (each error code), settings (key masking). Target: `bun test` green with ≥25 tests.
-- [ ] **8.2** Optional local auth token: on first start write `token` to the data dir; UI fetches it from `GET /api/auth/bootstrap` served only to same-origin; all other `/api` routes require `x-cronrunner-token`. Skip if it complicates the browser flow; document the decision.
-- [ ] **8.3** Logging: daemon writes to `logs/cronrunner.log` with daily rotation (simple size-based rotation is fine). Job output is already in the DB.
-- [ ] **8.4** Missed runs: on startup, log (not execute) each enabled job whose `nextRunAt` computed from `updatedAt` is in the past. Surface as an info banner on the dashboard: "N jobs missed runs while CronRunner was off."
-- [ ] **8.5** Remove `/_kitchen-sink` and `Placeholder.tsx`. Run `bun run lint` and `bun run format`. Update `README.md` with install steps per OS and screenshots.
-- [ ] **8.6** Accessibility pass per `DESIGN.md §6`.
+- [x] **8.1** Tests: executor (success/fail/timeout/kill/output cap), DAL (prune, orphan marking), routes (each error code), settings (key masking). Target: `bun test` green with ≥25 tests.
+- [x] **8.2** Optional local auth token: on first start write `token` to the data dir; UI fetches it from `GET /api/auth/bootstrap` served only to same-origin; all other `/api` routes require `x-cronrunner-token`. Skip if it complicates the browser flow; document the decision.
+- [x] **8.3** Logging: daemon writes to `logs/cronrunner.log` with daily rotation (simple size-based rotation is fine). Job output is already in the DB.
+- [x] **8.4** Missed runs: on startup, log (not execute) each enabled job whose `nextRunAt` computed from `updatedAt` is in the past. Surface as an info banner on the dashboard: "N jobs missed runs while CronRunner was off."
+- [x] **8.5** Remove `/_kitchen-sink` and `Placeholder.tsx`. Run `bun run lint` and `bun run format`. Update `README.md` with install steps per OS and screenshots.
+- [x] **8.6** Accessibility pass per `DESIGN.md §6`.
 
-**Verify:** fresh clone → `bun install && bun run compile` → binary works on macOS; `bun test`, `bun run typecheck`, `bun run lint` all clean.
+**Verify:** ✅ `bun run compile` from the current tree produced a binary that, run alone in an empty directory, logged `ui: embedded`, served the UI and API, wrote its own log file, and returned 403 to a request from `https://evil.example`. `bun test` (57), `bun run typecheck` and `bun run lint` are all clean.
+
+*Decision on 8.2 (local auth token): rejected in favour of an origin check.* Binding to 127.0.0.1 keeps other machines out but not the browser on this one — any site you visit can send a "simple" cross-origin POST to `127.0.0.1:4747` with no CORS preflight, and for a daemon that runs shell commands that is remote code execution. `routes/guard.ts` rejects every `/api` request whose `Origin` is not a loopback host; browsers always send `Origin` cross-origin, so the attack is blocked, while curl and scripts (which send none) keep working. A token would add a secret to store, fetch and leak without covering anything more. `guard.test.ts` exercises the attack directly.
+
+*Accessibility findings, fixed:* a `<label>` wrapping a `<button role="switch">` does **not** name it — labels only name true form controls — so every switch with a visible label was anonymous to screen readers; it now uses `aria-labelledby`. The API key field had no label at all. An audit across all five pages now reports no unnamed controls, unlabelled inputs or scope-less table headers.
+
+*Also fixed:* `settings.ts` could throw when saving into a data directory that did not exist yet.
 
 ---
 
