@@ -45,19 +45,37 @@
 }
 
 @layer base {
-  html, body, #root { height: 100%; }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
   body {
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-  ::selection { background: var(--color-accent-200); }
+  ::selection {
+    background: var(--color-accent-200);
+  }
 }
 
-@utility bg-surface { background-color: var(--surface); }
-@utility bg-surface-muted { background-color: var(--surface-muted); }
-@utility bg-app { background-color: var(--bg); }
-@utility border-default { border-color: var(--border); }
-@utility text-default { color: var(--text); }
-@utility text-muted { color: var(--text-muted); }
+@utility bg-surface {
+  background-color: var(--surface);
+}
+@utility bg-surface-muted {
+  background-color: var(--surface-muted);
+}
+@utility bg-app {
+  background-color: var(--bg);
+}
+@utility border-default {
+  border-color: var(--border);
+}
+@utility text-default {
+  color: var(--text);
+}
+@utility text-muted {
+  color: var(--text-muted);
+}
