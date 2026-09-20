@@ -96,10 +96,10 @@ async function compile(target: string, outfile: string, windows = false): Promis
 }
 
 /**
- * Compile the menu bar front end (apps/macos/CronRunnerMenuBar.swift) for one architecture.
+ * Compile the native front end (apps/macos/CronRunnerApp.swift) for one architecture.
  * swiftc cross-compiles between arm64 and x86_64 on any Mac with the command line tools.
  */
-async function compileMenuBar(arch: "arm64" | "x64", outfile: string): Promise<void> {
+async function compileMacApp(arch: "arm64" | "x64", outfile: string): Promise<void> {
   const triple = arch === "arm64" ? "arm64-apple-macos11" : "x86_64-apple-macos11";
   await run([
     "swiftc",
@@ -108,22 +108,24 @@ async function compileMenuBar(arch: "arm64" | "x64", outfile: string): Promise<v
     triple,
     "-framework",
     "AppKit",
+    "-framework",
+    "WebKit",
     "-o",
     outfile,
-    join(ROOT, "apps", "macos", "CronRunnerMenuBar.swift"),
+    join(ROOT, "apps", "macos", "CronRunnerApp.swift"),
   ]);
 }
 
 /**
  * Assemble the macOS .app.
  *
- *   Contents/MacOS/CronRunner       the Swift menu bar app, which macOS launches
+ *   Contents/MacOS/CronRunner       the Swift app, which macOS launches: a native window
+ *                                   hosting the interface, plus a menu bar icon
  *   Contents/Resources/cronrunner   the Bun daemon it starts, and stops on quit
  *
- * `LSUIElement` keeps it out of the Dock: it lives in the menu bar, like any background
- * utility. The daemon sits in Resources rather than MacOS, so it no longer matches the
- * "launched from a bundle" check that makes it open a browser; the menu bar app opens the
- * interface itself, once, when the daemon is ready.
+ * The daemon sits in Resources rather than MacOS, so it does not match the "launched from a
+ * bundle" check that would make it open a browser tab; the window shows the interface instead.
+ * NSAllowsLocalNetworking lets the web view load the daemon over plain http on 127.0.0.1.
  *
  * The bundle is re-signed afterwards, which is not optional. Bun's compiled binary arrives
  * ad-hoc "linker-signed" with the identifier `a.out`, and a signature made before the bundle
@@ -166,7 +168,8 @@ function writeInfoPlist(appPath: string): void {
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleVersion</key><string>${VERSION}</string>
   <key>LSMinimumSystemVersion</key><string>11.0</string>
-  <key>LSUIElement</key><true/>
+  <key>NSAppTransportSecurity</key>
+  <dict><key>NSAllowsLocalNetworking</key><true/></dict>
   <key>NSHighResolutionCapable</key><true/>
 </dict>
 </plist>
@@ -284,8 +287,8 @@ if (process.platform === "darwin") {
     process.stdout.write(`  ${label} … `);
     const binary = join(STAGE, `cronrunner-${arch}`);
     await compile(target, binary);
-    const menuBar = join(STAGE, `menubar-${arch}`);
-    await compileMenuBar(arch, menuBar);
+    const menuBar = join(STAGE, `macapp-${arch}`);
+    await compileMacApp(arch, menuBar);
     const app = join(STAGE, `CronRunner-${arch}.app`);
     await buildAppBundle(binary, menuBar, app);
     // Free the raw binaries before hdiutil runs; they are already inside the bundle.

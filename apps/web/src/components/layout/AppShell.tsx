@@ -1,5 +1,10 @@
 /**
  * Persistent left sidebar + scrollable content area. See docs/DESIGN.md §3 "Layout".
+ *
+ * Inside the native macOS window the page extends under a transparent title bar. The shell
+ * marks that with a `desktop-shell` class and a `--titlebar-height`, and the `titlebar-spacer`
+ * strips below keep that band clear: it holds the traffic lights and is where the window is
+ * dragged from. In a browser the spacers collapse to nothing.
  */
 
 import clsx from "clsx";
@@ -33,6 +38,7 @@ export function AppShell() {
   return (
     <div className="flex h-full">
       <aside className="flex w-60 shrink-0 flex-col border-r border-default bg-surface">
+        <div className="titlebar-spacer" aria-hidden />
         <div className="flex items-center gap-2.5 px-5 py-5">
           <div className="grid size-8 place-items-center rounded-lg bg-accent-500 text-white">
             <Clock className="size-4" />
@@ -85,7 +91,8 @@ export function AppShell() {
           </div>
         </div>
       </aside>
-      <main className="min-w-0 flex-1 overflow-y-auto">
+      <main className="flex min-w-0 flex-1 flex-col">
+        <div className="titlebar-spacer" aria-hidden />
         {disconnected && (
           <div
             role="alert"
@@ -102,8 +109,10 @@ export function AppShell() {
             </button>
           </div>
         )}
-        <div className="mx-auto max-w-6xl px-8 py-8">
-          <Outlet />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-6xl px-8 py-8">
+            <Outlet />
+          </div>
         </div>
       </main>
     </div>

@@ -16,15 +16,15 @@ behaves identically on macOS, Windows and Linux, including Windows, which has no
 
 ## Download
 
-Version **0.1.2**. Full instructions, including how to get past the unsigned-app warnings, are
+Version **0.1.3**. Full instructions, including how to get past the unsigned-app warnings, are
 in [docs/INSTALL.md](docs/INSTALL.md).
 
 | Platform | Download |
 | --- | --- |
-| macOS, Apple silicon | [CronRunner-0.1.2-macos-arm64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.2/CronRunner-0.1.2-macos-arm64.dmg) |
-| macOS, Intel | [CronRunner-0.1.2-macos-x64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.2/CronRunner-0.1.2-macos-x64.dmg) |
-| Windows, 64-bit | [CronRunner-0.1.2-windows-x64.exe](https://github.com/andywater01/cron-runner/releases/download/v0.1.2/CronRunner-0.1.2-windows-x64.exe) |
-| Linux, 64-bit | [CronRunner-0.1.2-linux-x64.tar.gz](https://github.com/andywater01/cron-runner/releases/download/v0.1.2/CronRunner-0.1.2-linux-x64.tar.gz) |
+| macOS, Apple silicon | [CronRunner-0.1.3-macos-arm64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.3/CronRunner-0.1.3-macos-arm64.dmg) |
+| macOS, Intel | [CronRunner-0.1.3-macos-x64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.3/CronRunner-0.1.3-macos-x64.dmg) |
+| Windows, 64-bit | [CronRunner-0.1.3-windows-x64.exe](https://github.com/andywater01/cron-runner/releases/download/v0.1.3/CronRunner-0.1.3-windows-x64.exe) |
+| Linux, 64-bit | [CronRunner-0.1.3-linux-x64.tar.gz](https://github.com/andywater01/cron-runner/releases/download/v0.1.3/CronRunner-0.1.3-linux-x64.tar.gz) |
 
 Each download is one self-contained app. There is no runtime to install alongside it and no
 account to create. The newest version is always on the

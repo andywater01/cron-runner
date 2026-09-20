@@ -79,3 +79,13 @@
 @utility text-muted {
   color: var(--text-muted);
 }
+
+/* Title bar band for the native macOS window (see components/layout/AppShell.tsx). */
+.titlebar-spacer {
+  display: none;
+}
+.desktop-shell .titlebar-spacer {
+  display: block;
+  flex-shrink: 0;
+  height: var(--titlebar-height, 28px);
+}

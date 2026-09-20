@@ -6,14 +6,14 @@ the interface appears in your browser.
 
 ## Download
 
-Current version: **0.1.2**
+Current version: **0.1.3**
 
 | Platform | Download | What you get |
 | --- | --- | --- |
-| macOS, Apple silicon (M1 and later) | [CronRunner-0.1.2-macos-arm64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.2/CronRunner-0.1.2-macos-arm64.dmg) | Disk image, drag to Applications |
-| macOS, Intel | [CronRunner-0.1.2-macos-x64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.2/CronRunner-0.1.2-macos-x64.dmg) | Disk image, drag to Applications |
-| Windows 10 and 11, 64-bit | [CronRunner-0.1.2-windows-x64.exe](https://github.com/andywater01/cron-runner/releases/download/v0.1.2/CronRunner-0.1.2-windows-x64.exe) | Single executable, nothing to install |
-| Linux, 64-bit | [CronRunner-0.1.2-linux-x64.tar.gz](https://github.com/andywater01/cron-runner/releases/download/v0.1.2/CronRunner-0.1.2-linux-x64.tar.gz) | Binary, desktop entry and installer |
+| macOS, Apple silicon (M1 and later) | [CronRunner-0.1.3-macos-arm64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.3/CronRunner-0.1.3-macos-arm64.dmg) | Disk image, drag to Applications |
+| macOS, Intel | [CronRunner-0.1.3-macos-x64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.3/CronRunner-0.1.3-macos-x64.dmg) | Disk image, drag to Applications |
+| Windows 10 and 11, 64-bit | [CronRunner-0.1.3-windows-x64.exe](https://github.com/andywater01/cron-runner/releases/download/v0.1.3/CronRunner-0.1.3-windows-x64.exe) | Single executable, nothing to install |
+| Linux, 64-bit | [CronRunner-0.1.3-linux-x64.tar.gz](https://github.com/andywater01/cron-runner/releases/download/v0.1.3/CronRunner-0.1.3-linux-x64.tar.gz) | Binary, desktop entry and installer |
 
 Newer versions are on the [releases page](https://github.com/andywater01/cron-runner/releases/latest).
 Every release also ships `SHA256SUMS.txt` if you want to verify your download.
@@ -23,10 +23,11 @@ Every release also ships `SHA256SUMS.txt` if you want to verify your download.
 Open the `.dmg` and drag **CronRunner** into your Applications folder, the same as any other
 Mac app. Launch it from Applications or Spotlight.
 
-CronRunner is a background app, so it lives in the **menu bar** rather than the Dock, the same
-as Dropbox or Tailscale. Look for the clock icon near the top right of your screen. Its menu
-shows how many jobs are enabled, opens the interface, and quits CronRunner properly, which
-stops the scheduler. The interface itself opens in your browser the first time it starts.
+CronRunner opens in its own window, with a Dock icon and a clock icon in the menu bar, the
+same shape as Docker Desktop. Closing the window does **not** stop your jobs: CronRunner keeps
+running in the background, and you can bring the window back from the Dock or the menu bar
+icon. The menu bar icon shows how many jobs are enabled and can also open the interface in
+your browser if you prefer that.
 
 The first time you open it, macOS will refuse, saying it cannot verify the developer. The app
 is signed, but not with a paid Apple Developer certificate, so it has not been notarized by
@@ -69,8 +70,8 @@ the shortcut into:
 Extract the archive and run the installer, which needs no root access:
 
 ```bash
-tar -xzf CronRunner-0.1.2-linux-x64.tar.gz
-cd CronRunner-0.1.2-linux-x64
+tar -xzf CronRunner-0.1.3-linux-x64.tar.gz
+cd CronRunner-0.1.3-linux-x64
 ./install.sh
 ```
 
@@ -85,8 +86,9 @@ To run it without installing, just execute the binary directly:
 
 ## After you open it
 
-CronRunner starts a small local server and opens the interface at <http://127.0.0.1:4747>. If
-your browser does not open on its own, visit that address yourself.
+On macOS the interface opens in CronRunner's own window. On Windows and Linux, CronRunner
+starts a small local server and opens the interface in your browser at
+<http://127.0.0.1:4747>; if the browser does not open on its own, visit that address yourself.
 
 Two things worth doing straight away:
 
@@ -97,9 +99,10 @@ Two things worth doing straight away:
   your own OpenAI or Anthropic key and it is stored on your machine only. Everything else in
   the app works without one.
 
-Closing the browser tab does not stop CronRunner. It keeps running so your jobs keep firing.
-To quit it, choose **Quit CronRunner** from the menu bar icon on macOS, end it in Task Manager
-on Windows, or stop the process on Linux.
+Closing the window or the browser tab does not stop CronRunner. It keeps running so your jobs
+keep firing. To quit it on macOS, press Cmd+Q or choose **Quit CronRunner** from the menu bar
+icon; either stops the scheduler. On Windows end it in Task Manager, and on Linux stop the
+process.
 
 ## Where your data lives
 
