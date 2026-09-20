@@ -169,16 +169,26 @@ Dashboard shows the four stat cards, upcoming runs and the recent activity feed;
 
 ## Acceptance checklist (map to PRD user stories)
 
-- [ ] U1 keys saved and tested in Settings
-- [ ] U2/U3/U4 AI draft → review → refine → save
-- [ ] U5 manual editor with presets, cron, timezone, preview
-- [ ] U6 jobs list with status/last/next
-- [ ] U7 enable/disable toggle, optimistic
-- [ ] U8 run now
-- [ ] U9 live stdout/stderr, exit code, history
-- [ ] U10 AI diagnosis of failed run
-- [ ] U11 kill running job
-- [ ] U12 timeout + cwd + shell + env per job
-- [ ] U13 light/dark
-- [ ] U14 start at login (macOS, Linux, Windows)
-- [ ] Single binary per OS
+- [x] U1 keys saved and tested in Settings — *saved, masked and stored 0600; the **failure** path shows a readable message. A successful test needs a real key (see Phase 5).*
+- [x] U2/U3/U4 AI draft → review → refine → save — *verified end to end against a mock provider; real provider output unverified (see Phase 6).*
+- [x] U5 manual editor with presets, cron, timezone, preview
+- [x] U6 jobs list with status/last/next
+- [x] U7 enable/disable toggle, optimistic
+- [x] U8 run now
+- [x] U9 live stdout/stderr, exit code, history — *including opening a run that is already in flight*
+- [x] U10 AI diagnosis of failed run — *via mock provider*
+- [x] U11 kill running job
+- [x] U12 timeout + cwd + shell + env per job
+- [x] U13 light/dark
+- [~] U14 start at login — *round-tripped for real on macOS (launch agent written, loaded, removed). Linux systemd units and Windows logon tasks are implemented but were never executed on those platforms, and no reboot was tested anywhere.*
+- [x] Single binary per OS — *all four cross-compiled; only the macOS arm64 binary was run.*
+
+## What is left
+
+1. **A real API key.** Phase 6's prompt tuning is the only substantive piece of the plan not
+   done: the six example prompts have never been run against OpenAI or Anthropic, so nothing
+   has confirmed the quality of what a real model returns, only that the plumbing works.
+2. **Non-macOS verification.** Linux and Windows paths (shell selection, start at login,
+   notifications in AI-drafted commands) are written from the documented behaviour but have
+   not been executed on those systems.
+3. **A reboot test** for start at login.
