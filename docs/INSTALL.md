@@ -6,14 +6,14 @@ the interface appears in your browser.
 
 ## Download
 
-Current version: **0.1.0**
+Current version: **0.1.1**
 
 | Platform | Download | What you get |
 | --- | --- | --- |
-| macOS, Apple silicon (M1 and later) | [CronRunner-0.1.0-macos-arm64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.0/CronRunner-0.1.0-macos-arm64.dmg) | Disk image, drag to Applications |
-| macOS, Intel | [CronRunner-0.1.0-macos-x64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.0/CronRunner-0.1.0-macos-x64.dmg) | Disk image, drag to Applications |
-| Windows 10 and 11, 64-bit | [CronRunner-0.1.0-windows-x64.exe](https://github.com/andywater01/cron-runner/releases/download/v0.1.0/CronRunner-0.1.0-windows-x64.exe) | Single executable, nothing to install |
-| Linux, 64-bit | [CronRunner-0.1.0-linux-x64.tar.gz](https://github.com/andywater01/cron-runner/releases/download/v0.1.0/CronRunner-0.1.0-linux-x64.tar.gz) | Binary, desktop entry and installer |
+| macOS, Apple silicon (M1 and later) | [CronRunner-0.1.1-macos-arm64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.1/CronRunner-0.1.1-macos-arm64.dmg) | Disk image, drag to Applications |
+| macOS, Intel | [CronRunner-0.1.1-macos-x64.dmg](https://github.com/andywater01/cron-runner/releases/download/v0.1.1/CronRunner-0.1.1-macos-x64.dmg) | Disk image, drag to Applications |
+| Windows 10 and 11, 64-bit | [CronRunner-0.1.1-windows-x64.exe](https://github.com/andywater01/cron-runner/releases/download/v0.1.1/CronRunner-0.1.1-windows-x64.exe) | Single executable, nothing to install |
+| Linux, 64-bit | [CronRunner-0.1.1-linux-x64.tar.gz](https://github.com/andywater01/cron-runner/releases/download/v0.1.1/CronRunner-0.1.1-linux-x64.tar.gz) | Binary, desktop entry and installer |
 
 Newer versions are on the [releases page](https://github.com/andywater01/cron-runner/releases/latest).
 Every release also ships `SHA256SUMS.txt` if you want to verify your download.
@@ -23,20 +23,27 @@ Every release also ships `SHA256SUMS.txt` if you want to verify your download.
 Open the `.dmg` and drag **CronRunner** into your Applications folder, the same as any other
 Mac app. Launch it from Applications, Spotlight or the Dock.
 
-The first time you open it, macOS will refuse, because the app is not signed by a registered
-Apple developer. This is expected for now and there are two ways past it:
+The first time you open it, macOS will refuse, saying it cannot verify the developer. The app
+is signed, but not with a paid Apple Developer certificate, so it has not been notarized by
+Apple. To get past it:
 
-- **Right-click the app and choose Open**, then click Open in the dialog. macOS remembers the
-  choice, so you only do this once.
-- Or, if macOS says the app "is damaged" or offers no Open button, clear the download
-  quarantine flag and launch it normally:
+**On macOS 15 (Sequoia) and later**, including macOS 26, open **System Settings → Privacy &
+Security**, scroll down to the Security section, and click **Open Anyway** next to the message
+about CronRunner. Confirm with your password or Touch ID, then open the app again. Right
+clicking and choosing Open no longer works on these versions; Apple removed that shortcut.
 
-  ```bash
-  xattr -dr com.apple.quarantine /Applications/CronRunner.app
-  ```
+**On macOS 14 and earlier**, right-click the app and choose **Open**, then click Open in the
+dialog.
 
-Nothing about this is specific to CronRunner. It applies to any app distributed outside the
-App Store without a paid Apple Developer signature.
+Either way you only do it once. If you would rather do it from a terminal, this has the same
+effect and works on every version:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/CronRunner.app
+```
+
+Nothing here is specific to CronRunner. It applies to any app distributed outside the App Store
+without a paid Apple Developer signature.
 
 ## Windows
 
@@ -57,8 +64,8 @@ the shortcut into:
 Extract the archive and run the installer, which needs no root access:
 
 ```bash
-tar -xzf CronRunner-0.1.0-linux-x64.tar.gz
-cd CronRunner-0.1.0-linux-x64
+tar -xzf CronRunner-0.1.1-linux-x64.tar.gz
+cd CronRunner-0.1.1-linux-x64
 ./install.sh
 ```
 

@@ -98,8 +98,16 @@ async function compile(target: string, outfile: string, windows = false): Promis
 /**
  * Wrap a compiled binary in a macOS .app. The binary detects that it is running inside a
  * bundle and opens the UI itself, so no launcher script is needed.
+ *
+ * The bundle is re-signed afterwards, which is not optional. Bun's compiled binary arrives
+ * ad-hoc "linker-signed" with the identifier `a.out`, and a signature made before the bundle
+ * existed covers neither Info.plist nor Resources. macOS reads that as a broken signature
+ * rather than merely an unsigned one, and refuses to launch the app at all: "code has no
+ * resources but signature indicates they must be present". Re-signing the assembled bundle
+ * ad-hoc makes it internally consistent. The app is still not notarized, so users get the
+ * ordinary "unidentified developer" prompt, which they can get past.
  */
-function buildAppBundle(binary: string, appPath: string): void {
+async function buildAppBundle(binary: string, appPath: string): Promise<void> {
   rmSync(appPath, { recursive: true, force: true });
   const macos = join(appPath, "Contents", "MacOS");
   const resources = join(appPath, "Contents", "Resources");
@@ -110,6 +118,11 @@ function buildAppBundle(binary: string, appPath: string): void {
   chmodSync(join(macos, "CronRunner"), 0o755);
   cpSync(join(ICON_DIR, "AppIcon.icns"), join(resources, "AppIcon.icns"));
 
+  writeInfoPlist(appPath);
+  await run(["codesign", "--force", "--deep", "--sign", "-", appPath]);
+}
+
+function writeInfoPlist(appPath: string): void {
   writeFileSync(
     join(appPath, "Contents", "Info.plist"),
     `<?xml version="1.0" encoding="UTF-8"?>
@@ -243,7 +256,7 @@ if (process.platform === "darwin") {
     const binary = join(STAGE, `cronrunner-${arch}`);
     await compile(target, binary);
     const app = join(STAGE, `CronRunner-${arch}.app`);
-    buildAppBundle(binary, app);
+    await buildAppBundle(binary, app);
     // Free the raw binary before hdiutil runs; it is already inside the bundle.
     rmSync(binary, { force: true });
     const dmg = join(DIST, `CronRunner-${VERSION}-macos-${arch}.dmg`);
