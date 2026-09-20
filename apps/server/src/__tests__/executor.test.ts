@@ -53,7 +53,11 @@ beforeEach(() => {
   useInMemoryDb();
 });
 
-describe("executeJob", () => {
+// These drive a real shell with POSIX syntax (redirection, $(...), seq). On Windows the
+// default shell is PowerShell, so they are skipped there and covered by the smoke test below.
+const posixOnly = process.platform === "win32";
+
+describe.skipIf(posixOnly)("executeJob", () => {
   test("records a successful run with its output", async () => {
     const run = await executeJob(makeJob({ command: "echo hello" }), "manual");
     expect(run.status).toBe("success");
@@ -144,6 +148,21 @@ describe("executeJob", () => {
     expect(stored?.status).toBe("success");
     expect(stored?.trigger).toBe("schedule");
     expect(stored?.stdout.trim()).toBe("stored");
+  });
+});
+
+describe.skipIf(!posixOnly)("executeJob on Windows", () => {
+  test("runs a command through PowerShell and records the output", async () => {
+    const run = await executeJob(makeJob({ command: "Write-Output hello" }), "manual");
+    expect(run.status).toBe("success");
+    expect(run.exitCode).toBe(0);
+    expect(run.stdout.trim()).toBe("hello");
+  });
+
+  test("a failing command is recorded as failed", async () => {
+    const run = await executeJob(makeJob({ command: "exit 7" }), "manual");
+    expect(run.status).toBe("failed");
+    expect(run.exitCode).toBe(7);
   });
 });
 

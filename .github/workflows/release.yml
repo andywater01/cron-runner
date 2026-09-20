@@ -1,8 +1,8 @@
 # Builds the downloadable apps and publishes them as a GitHub Release.
 #
 # Each platform is built on its own runner because the packaging needs native tooling:
-# macOS .dmg needs hdiutil, and Bun's --windows-icon / --windows-hide-console are only
-# accepted when compiling on Windows. Cross-compiling would produce working but plain files.
+# the macOS .dmg needs hdiutil, and Bun's --windows-icon / --windows-hide-console are only
+# accepted when compiling on Windows. Cross-compiling produces working but plain files.
 #
 # Cut a release with:
 #   git tag v0.1.0 && git push origin v0.1.0
@@ -17,8 +17,22 @@ permissions:
   contents: write
 
 jobs:
+  check:
+    name: Types, tests and lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun test
+      - run: bun run lint
+
   build:
     name: Build ${{ matrix.platform }}
+    needs: check
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -40,20 +54,13 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Check types, tests and lint
-        run: |
-          bun run typecheck
-          bun test
-          bun run lint
-
       - name: Build packages
         run: bun run package -- --only=${{ matrix.platform }}
 
       - uses: actions/upload-artifact@v4
         with:
           name: cronrunner-${{ matrix.platform }}
-          path: |
-            apps/server/dist/CronRunner-*
+          path: apps/server/dist/CronRunner-*
           if-no-files-found: error
 
   release:
@@ -76,4 +83,3 @@ jobs:
         with:
           files: artifacts/*
           generate_release_notes: true
-          draft: false
