@@ -218,6 +218,13 @@ export const SystemInfoSchema = z.object({
   schedulerRunning: z.boolean(),
   jobCount: z.number().int(),
   enabledJobCount: z.number().int(),
+  /** Whether this machine can start CronRunner at login, and whether it is set up. */
+  autostart: z.object({
+    supported: z.boolean(),
+    enabled: z.boolean(),
+    reason: z.string().optional(),
+    location: z.string().optional(),
+  }),
 });
 export type SystemInfo = z.infer<typeof SystemInfoSchema>;
 

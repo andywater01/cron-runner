@@ -2,13 +2,20 @@
  * Persistent left sidebar + scrollable content area. See docs/DESIGN.md §3 "Layout".
  */
 
-import { useQuery } from "@tanstack/react-query";
 import clsx from "clsx";
-import { Activity, Clock, LayoutDashboard, ListChecks, Moon, Settings, Sun } from "lucide-react";
+import {
+  Activity,
+  Clock,
+  LayoutDashboard,
+  ListChecks,
+  Moon,
+  Settings,
+  Sun,
+  WifiOff,
+} from "lucide-react";
 import { NavLink, Outlet } from "react-router-dom";
+import { useSystemInfo } from "@/hooks/useSystemInfo";
 import { useTheme } from "@/hooks/useTheme";
-import { api } from "@/lib/api";
-import { qk } from "@/lib/queryKeys";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -19,7 +26,9 @@ const nav = [
 
 export function AppShell() {
   const { theme, setTheme } = useTheme();
-  const system = useQuery({ queryKey: qk.system, queryFn: api.system, refetchInterval: 30_000 });
+  const system = useSystemInfo();
+  // Two consecutive failures means the daemon is genuinely gone, not just a blip.
+  const disconnected = system.isError && system.failureCount >= 2;
 
   return (
     <div className="flex h-full">
@@ -56,10 +65,14 @@ export function AppShell() {
               <span
                 className={clsx(
                   "size-1.5 rounded-full",
-                  system.data?.schedulerRunning ? "bg-success" : "bg-danger",
+                  system.data?.schedulerRunning && !disconnected ? "bg-success" : "bg-danger",
                 )}
               />
-              {system.data ? `${system.data.enabledJobCount} active` : "Connecting…"}
+              {disconnected
+                ? "Offline"
+                : system.data
+                  ? `${system.data.enabledJobCount} active`
+                  : "Connecting…"}
             </span>
             <button
               type="button"
@@ -73,6 +86,22 @@ export function AppShell() {
         </div>
       </aside>
       <main className="min-w-0 flex-1 overflow-y-auto">
+        {disconnected && (
+          <div
+            role="alert"
+            className="flex items-center justify-center gap-2 border-b border-danger/30 bg-danger/10 px-4 py-2 text-xs text-danger"
+          >
+            <WifiOff className="size-3.5 shrink-0" aria-hidden />
+            Can't reach the CronRunner daemon. Scheduled jobs are not running.
+            <button
+              type="button"
+              onClick={() => system.refetch()}
+              className="ml-1 font-medium underline underline-offset-2"
+            >
+              Retry
+            </button>
+          </div>
+        )}
         <div className="mx-auto max-w-6xl px-8 py-8">
           <Outlet />
         </div>

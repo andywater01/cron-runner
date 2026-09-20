@@ -1,14 +1,16 @@
 import { hostname } from "node:os";
 import type { SystemInfo } from "@cronrunner/shared";
 import { Hono } from "hono";
+import * as autostart from "../autostart";
 import { APP_VERSION, DATA_DIR } from "../config";
 import * as db from "../db/db";
 import { isSchedulerRunning } from "../scheduler/scheduler";
+import { HttpError } from "./util";
 
 export const systemRoute = new Hono();
 const bootedAt = Date.now();
 
-systemRoute.get("/", (c) => {
+systemRoute.get("/", async (c) => {
   const jobs = db.listJobs();
   const info: SystemInfo = {
     version: APP_VERSION,
@@ -20,6 +22,34 @@ systemRoute.get("/", (c) => {
     schedulerRunning: isSchedulerRunning(),
     jobCount: jobs.length,
     enabledJobCount: jobs.filter((j) => j.enabled).length,
+    autostart: await autostart.status(),
   };
   return c.json(info);
+});
+
+/** Start at login: read, enable, disable. */
+systemRoute.get("/autostart", async (c) => c.json(await autostart.status()));
+
+systemRoute.post("/autostart", async (c) => {
+  try {
+    return c.json(await autostart.install());
+  } catch (err) {
+    throw new HttpError(
+      400,
+      "autostart_failed",
+      err instanceof Error ? err.message : "Could not set up start at login",
+    );
+  }
+});
+
+systemRoute.delete("/autostart", async (c) => {
+  try {
+    return c.json(await autostart.uninstall());
+  } catch (err) {
+    throw new HttpError(
+      400,
+      "autostart_failed",
+      err instanceof Error ? err.message : "Could not remove start at login",
+    );
+  }
 });

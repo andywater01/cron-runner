@@ -12,11 +12,12 @@
     "dev:server": "bun run --cwd apps/server dev",
     "dev:web": "bun run --cwd apps/web dev",
     "build": "bun run --cwd apps/web build && bun run --cwd apps/server build",
-    "compile": "bun run --cwd apps/web build && bun run --cwd apps/server compile",
+    "compile": "bun run --cwd apps/web build && bun run --cwd apps/server embed && bun run --cwd apps/server compile",
     "typecheck": "bun run --cwd packages/shared typecheck && bun run --cwd apps/server typecheck && bun run --cwd apps/web typecheck",
     "test": "bun test",
     "lint": "bunx @biomejs/biome check .",
-    "format": "bunx @biomejs/biome format --write ."
+    "format": "bunx @biomejs/biome format --write .",
+    "release": "bun run --cwd apps/web build && bun run --cwd apps/server embed && bun apps/server/scripts/release.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.1.0",

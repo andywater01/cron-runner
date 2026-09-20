@@ -5,7 +5,6 @@
 
 import { API_PREFIX } from "@cronrunner/shared";
 import { Hono } from "hono";
-import { serveStatic } from "hono/bun";
 import { logger } from "hono/logger";
 import { aiRoute } from "./routes/ai";
 import { eventsRoute } from "./routes/events";
@@ -15,7 +14,7 @@ import { settingsRoute } from "./routes/settings";
 import { systemRoute } from "./routes/system";
 import { apiError, HttpError } from "./routes/util";
 
-export function createApp(opts: { staticDir?: string } = {}) {
+export function createApp() {
   const app = new Hono();
   app.use("*", logger());
 
@@ -39,10 +38,5 @@ export function createApp(opts: { staticDir?: string } = {}) {
       : c.text("Not found", 404),
   );
 
-  // Production: serve the built SPA from apps/server/public (copied there by the web build).
-  if (opts.staticDir) {
-    app.use("/*", serveStatic({ root: opts.staticDir }));
-    app.get("/*", serveStatic({ root: opts.staticDir, path: "index.html" }));
-  }
   return app;
 }

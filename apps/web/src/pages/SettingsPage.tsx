@@ -1,6 +1,7 @@
 import type { LlmProvider, Shell } from "@cronrunner/shared";
 import clsx from "clsx";
 import { useState } from "react";
+import { AutostartCard } from "@/components/settings/AutostartCard";
 import { ProviderCard } from "@/components/settings/ProviderCard";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -118,6 +119,13 @@ export function SettingsPage() {
                 update.mutate({ runRetentionPerJob: next });
               }}
             />
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader title="Startup" subtitle="CronRunner must be running for jobs to fire." />
+          <CardBody>
+            <AutostartCard />
           </CardBody>
         </Card>
 

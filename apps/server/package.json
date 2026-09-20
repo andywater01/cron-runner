@@ -9,7 +9,8 @@
     "build": "bun build src/index.ts --target=bun --outdir=dist",
     "compile": "bun build src/index.ts --compile --outfile dist/cronrunner",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "bun test"
+    "test": "bun test",
+    "embed": "bun scripts/embed.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.80.0",

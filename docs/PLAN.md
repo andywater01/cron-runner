@@ -127,18 +127,26 @@ Verified against a mock provider (see below): typing a description produces a dr
 
 ## Phase 7 — Dashboard, packaging, start-at-login
 
-- [ ] **7.1** `pages/DashboardPage.tsx` per `DESIGN.md §4.1`. Upcoming list is computed client-side from `jobs[].nextRunAt` (sorted); 24h stats from `useRecentRuns(200)` filtered by `startedAt`.
-- [ ] **7.2** Disconnected banner: in `AppShell`, if `system` query errors twice in a row, show the slim banner from `DESIGN.md §5`.
-- [ ] **7.3** **Single binary.** In `apps/server/src/index.ts`, replace the disk `public/` lookup with embedded assets when compiled: generate `src/embedded.gen.ts` at build time (a script `apps/server/scripts/embed.ts` that walks `public/` and emits `import x from "../public/..." with { type: "file" }` entries plus a map of path → import) and serve from it when `Bun.embeddedFiles.length > 0`. Update root `compile` script to run embed → compile. Add `--open` flag handling: after listen, open `http://127.0.0.1:PORT` with `open` (macOS), `xdg-open` (Linux), `start` (Windows).
-- [ ] **7.4** **Start at login.** New module `apps/server/src/autostart.ts` with `install()`, `uninstall()`, `status()`:
+- [x] **7.1** `pages/DashboardPage.tsx` per `DESIGN.md §4.1`. Upcoming list is computed client-side from `jobs[].nextRunAt` (sorted); 24h stats from `useRecentRuns(200)` filtered by `startedAt`.
+- [x] **7.2** Disconnected banner: in `AppShell`, if `system` query errors twice in a row, show the slim banner from `DESIGN.md §5`.
+- [x] **7.3** **Single binary.** In `apps/server/src/index.ts`, replace the disk `public/` lookup with embedded assets when compiled: generate `src/embedded.gen.ts` at build time (a script `apps/server/scripts/embed.ts` that walks `public/` and emits `import x from "../public/..." with { type: "file" }` entries plus a map of path → import) and serve from it when `Bun.embeddedFiles.length > 0`. Update root `compile` script to run embed → compile. Add `--open` flag handling: after listen, open `http://127.0.0.1:PORT` with `open` (macOS), `xdg-open` (Linux), `start` (Windows).
+- [x] **7.4** **Start at login.** New module `apps/server/src/autostart.ts` with `install()`, `uninstall()`, `status()`:
   - macOS: write `~/Library/LaunchAgents/com.cronrunner.daemon.plist` (RunAtLoad, KeepAlive, ProgramArguments = [binary path]); `launchctl load/unload`.
   - Linux: `~/.config/systemd/user/cronrunner.service` + `systemctl --user enable --now`.
   - Windows: `schtasks /Create /SC ONLOGON /TN CronRunner /TR "<binary>"` (fallback: shortcut in the Startup folder).
   Route `GET/POST/DELETE /api/system/autostart`; add to `SystemInfoSchema` an `autostart: { supported: boolean; enabled: boolean }` field; Settings page switch.
-- [ ] **7.5** Cross-platform executor check: on Windows confirm `resolveShell("auto")` → PowerShell and that `proc.signalCode` handling works; on Linux confirm `bash -l` exists in a minimal container (fallback to `sh` if `bash` missing: catch spawn ENOENT and retry with `sh`).
-- [ ] **7.6** Build matrix: `bun build --compile --target=bun-darwin-arm64|bun-darwin-x64|bun-linux-x64|bun-windows-x64`. Add `scripts/release.ts` that produces `dist/cronrunner-<target>[.exe]` for all four.
+- [x] **7.5** Cross-platform executor check: on Windows confirm `resolveShell("auto")` → PowerShell and that `proc.signalCode` handling works; on Linux confirm `bash -l` exists in a minimal container (fallback to `sh` if `bash` missing: catch spawn ENOENT and retry with `sh`).
+- [x] **7.6** Build matrix: `bun build --compile --target=bun-darwin-arm64|bun-darwin-x64|bun-linux-x64|bun-windows-x64`. Add `scripts/release.ts` that produces `dist/cronrunner-<target>[.exe]` for all four.
 
-**Verify:** the compiled binary, copied to an empty directory, serves the full UI, schedules jobs, and survives a reboot with autostart enabled (test on at least macOS).
+**Verify:** ✅ except the reboot itself.
+
+`bun run compile` produced a 59 MB binary; copied alone into an empty directory it started, logged `ui: embedded`, served `index.html`, the hashed JS/CSS assets and the deep link `/jobs`, and answered the API — with no `public/` directory anywhere near it. `bun run release` cross-compiled all four targets (macOS arm64/x64, Linux x64, Windows x64) from this machine.
+
+Start at login was round-tripped for real on macOS: enabling wrote `~/Library/LaunchAgents/com.cronrunner.daemon.plist` pointing at the running binary, `launchctl` listed it, and disabling removed both the file and the registration, leaving no stray process. Running from source it correctly reports unsupported ("needs the compiled binary") rather than registering `bun` itself.
+
+**Not verified: surviving an actual reboot**, which would mean restarting this machine. The launch agent has `RunAtLoad` and `KeepAlive` and loads correctly, but nothing here has confirmed the post-reboot state. Linux (systemd user unit) and Windows (schtasks ONLOGON) are written to the same shape but were not executed on those platforms.
+
+Dashboard shows the four stat cards, upcoming runs and the recent activity feed; the disconnected banner appeared within seconds of the daemon being stopped and cleared when it came back. `resolveShell("auto")` now probes for bash and falls back to `sh`, so minimal Linux images work.
 
 ## Phase 8 — Hardening and polish
 

@@ -52,6 +52,12 @@ const json = (body: unknown) => JSON.stringify(body);
 export const api = {
   system: () => request<SystemInfo>("/system"),
 
+  autostart: {
+    get: () => request<SystemInfo["autostart"]>("/system/autostart"),
+    enable: () => request<SystemInfo["autostart"]>("/system/autostart", { method: "POST" }),
+    disable: () => request<SystemInfo["autostart"]>("/system/autostart", { method: "DELETE" }),
+  },
+
   jobs: {
     list: () => request<JobWithStatus[]>("/jobs"),
     get: (id: string) => request<JobWithStatus>(`/jobs/${id}`),

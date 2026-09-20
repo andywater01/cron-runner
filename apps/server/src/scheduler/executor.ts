@@ -10,6 +10,7 @@
  *  - keep a live buffer so a client can open a run that is already in flight
  */
 
+import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import type { Job, Run, RunTrigger, Shell } from "@cronrunner/shared";
 import { MAX_OUTPUT_BYTES_PER_STREAM } from "@cronrunner/shared";
@@ -53,10 +54,21 @@ export function getLiveOutput(
   return { stdout: entry.stdout, stderr: entry.stderr, seq: entry.seq };
 }
 
+/**
+ * On "auto", pick the shell that actually exists here. Minimal Linux images often ship
+ * `sh` (dash/busybox) without bash, so preferring bash blindly would fail to spawn.
+ */
+function autoShell(): Shell {
+  if (process.platform === "win32") return "powershell";
+  for (const candidate of ["/bin/bash", "/usr/bin/bash", "/usr/local/bin/bash"]) {
+    if (existsSync(candidate)) return "bash";
+  }
+  return "sh";
+}
+
 /** Resolve the shell executable + args for a job on this platform. */
 export function resolveShell(shell: Shell): { cmd: string[]; commandFlag: string } {
-  const isWin = process.platform === "win32";
-  const effective: Shell = shell === "auto" ? (isWin ? "powershell" : "bash") : shell;
+  const effective: Shell = shell === "auto" ? autoShell() : shell;
   switch (effective) {
     case "powershell":
       return { cmd: ["powershell.exe", "-NoProfile", "-NonInteractive"], commandFlag: "-Command" };
