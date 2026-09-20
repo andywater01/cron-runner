@@ -7,8 +7,7 @@
  *  - enforce timeoutSeconds (kill on expiry -> status "timeout")
  *  - support manual kill (status "killed")
  *  - write the Run row and publish run.started / run.finished
- *
- * TODO(plan §4.3): implement. Skeleton below shows the intended shape.
+ *  - keep a live buffer so a client can open a run that is already in flight
  */
 
 import { homedir } from "node:os";
@@ -17,8 +16,18 @@ import { MAX_OUTPUT_BYTES_PER_STREAM } from "@cronrunner/shared";
 import * as db from "../db/db";
 import { publish } from "../events";
 
-/** Active child processes keyed by run id so they can be killed. */
-const active = new Map<string, { proc: Bun.Subprocess; jobId: string }>();
+interface ActiveRun {
+  proc: Bun.Subprocess;
+  jobId: string;
+  /** Output so far, so a client that opens a run mid-flight sees what it missed. */
+  stdout: string;
+  stderr: string;
+  /** Sequence of the most recent chunk published for this run. */
+  seq: number;
+}
+
+/** Active child processes keyed by run id, so they can be killed and their output read live. */
+const active = new Map<string, ActiveRun>();
 
 export function isJobRunning(jobId: string): boolean {
   for (const v of active.values()) if (v.jobId === jobId) return true;
@@ -30,6 +39,18 @@ export function killRun(runId: string): boolean {
   if (!entry) return false;
   entry.proc.kill();
   return true;
+}
+
+/**
+ * Output captured so far for a run that is still going, with the sequence number it
+ * reflects. Returns null once the run has finished (the database copy is then complete).
+ */
+export function getLiveOutput(
+  runId: string,
+): { stdout: string; stderr: string; seq: number } | null {
+  const entry = active.get(runId);
+  if (!entry) return null;
+  return { stdout: entry.stdout, stderr: entry.stderr, seq: entry.seq };
 }
 
 /** Resolve the shell executable + args for a job on this platform. */
@@ -73,7 +94,8 @@ export async function executeJob(job: Job, trigger: RunTrigger): Promise<Run> {
     stderr: "pipe",
     stdin: "ignore",
   });
-  active.set(run.id, { proc, jobId: job.id });
+  const activeRun: ActiveRun = { proc, jobId: job.id, stdout: "", stderr: "", seq: 0 };
+  active.set(run.id, activeRun);
 
   let timedOut = false;
   const timer = job.timeoutSeconds
@@ -94,7 +116,18 @@ export async function executeJob(job: Job, trigger: RunTrigger): Promise<Run> {
         if (stderr.length < MAX_OUTPUT_BYTES_PER_STREAM) stderr += text;
         else truncatedErr = true;
       }
-      publish({ type: "run.output", runId: run.id, stream: which, chunk: text });
+      // Update the live snapshot before publishing, so a reader that fetches the snapshot
+      // after seeing an event never sees a state older than that event.
+      activeRun.seq += 1;
+      activeRun.stdout = stdout;
+      activeRun.stderr = stderr;
+      publish({
+        type: "run.output",
+        runId: run.id,
+        stream: which,
+        chunk: text,
+        seq: activeRun.seq,
+      });
     }
   };
 

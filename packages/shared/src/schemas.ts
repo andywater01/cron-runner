@@ -104,6 +104,12 @@ export const RunSchema = z.object({
   stdout: z.string(),
   stderr: z.string(),
   durationMs: z.number().int().nonnegative().nullable(),
+  /**
+   * Only present while a run is still going: the sequence number of the last output chunk
+   * included in `stdout`/`stderr` above. A client that is also receiving `run.output` events
+   * uses it to append only the chunks newer than this snapshot, with no gap and no duplicates.
+   */
+  outputSeq: z.number().int().nonnegative().optional(),
 });
 export type Run = z.infer<typeof RunSchema>;
 
@@ -234,6 +240,8 @@ export const ServerEventSchema = z.discriminatedUnion("type", [
     runId: RunIdSchema,
     stream: z.enum(["stdout", "stderr"]),
     chunk: z.string(),
+    /** Monotonic per run, starting at 1. See `Run.outputSeq`. */
+    seq: z.number().int().positive(),
   }),
   z.object({ type: z.literal("job.changed"), jobId: JobIdSchema }),
   z.object({ type: z.literal("job.deleted"), jobId: JobIdSchema }),

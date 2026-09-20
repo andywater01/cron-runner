@@ -1,20 +1,41 @@
 /**
- * Keeps one EventSource open to /api/events and invalidates react-query caches when
- * jobs or runs change, so every view stays live without polling.
+ * Keeps one EventSource open to /api/events, republishes every event on the client bus,
+ * and invalidates react-query caches so all views stay live without polling.
+ *
+ * `run.output` is deliberately excluded from invalidation: it arrives per chunk and is
+ * consumed directly by `useRunOutput`.
  */
 
 import type { ServerEvent } from "@cronrunner/shared";
 import { API_PREFIX } from "@cronrunner/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { publishClientEvent } from "@/lib/eventBus";
 import { qk } from "@/lib/queryKeys";
+
+const EVENT_TYPES: ServerEvent["type"][] = [
+  "run.started",
+  "run.finished",
+  "run.output",
+  "job.changed",
+  "job.deleted",
+];
 
 export function useServerEvents() {
   const qc = useQueryClient();
+
   useEffect(() => {
     const es = new EventSource(`${API_PREFIX}/events`);
+
     const handle = (e: MessageEvent) => {
-      const event = JSON.parse(e.data) as ServerEvent;
+      let event: ServerEvent;
+      try {
+        event = JSON.parse(e.data) as ServerEvent;
+      } catch {
+        return;
+      }
+      publishClientEvent(event);
+
       switch (event.type) {
         case "run.started":
         case "run.finished":
@@ -31,9 +52,8 @@ export function useServerEvents() {
           break;
       }
     };
-    for (const t of ["run.started", "run.finished", "job.changed", "job.deleted"]) {
-      es.addEventListener(t, handle as EventListener);
-    }
+
+    for (const type of EVENT_TYPES) es.addEventListener(type, handle as EventListener);
     return () => es.close();
   }, [qc]);
 }

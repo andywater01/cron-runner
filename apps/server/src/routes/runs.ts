@@ -6,7 +6,7 @@
  */
 import { Hono } from "hono";
 import * as db from "../db/db";
-import { killRun } from "../scheduler/executor";
+import { getLiveOutput, killRun } from "../scheduler/executor";
 import { HttpError } from "./util";
 
 export const runsRoute = new Hono();
@@ -19,6 +19,12 @@ runsRoute.get("/", (c) => {
 runsRoute.get("/:id", (c) => {
   const run = db.getRun(c.req.param("id"));
   if (!run) throw new HttpError(404, "not_found", "Run not found");
+  // A run in flight has written nothing to the database yet, so serve the live buffer and
+  // tell the client which chunk it reflects (see Run.outputSeq).
+  const live = run.status === "running" ? getLiveOutput(run.id) : null;
+  if (live) {
+    return c.json({ ...run, stdout: live.stdout, stderr: live.stderr, outputSeq: live.seq });
+  }
   return c.json(run);
 });
 

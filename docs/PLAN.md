@@ -76,13 +76,17 @@ Build every primitive in `DESIGN.md §2` as its own file. Keep them small, typed
 
 ## Phase 4 — Job detail and run viewer
 
-- [ ] **4.1** `hooks/useRuns.ts`: `useJobRuns(id)`, `useRun(id)`, `useRecentRuns()`, `useKillRun()`.
-- [ ] **4.2** `hooks/useRunOutput.ts`: subscribes to SSE `run.output` events for a given runId (open a second `EventSource` or extend `useServerEvents` with a tiny event emitter so components can listen) and appends chunks to local state; seeds from `useRun` when the run is already finished.
-- [ ] **4.3** `components/runs/RunsTable.tsx`, `components/runs/RunDrawer.tsx` (right side panel; stdout/stderr tabs; auto-scroll toggle; Kill button when running; copy output).
-- [ ] **4.4** `pages/JobDetailPage.tsx` per `DESIGN.md §4.4`. Enabled switch in the header uses `useToggleJob`.
-- [ ] **4.5** `pages/ActivityPage.tsx`: `useRecentRuns` + status/job filters + same drawer.
+- [x] **4.1** `hooks/useRuns.ts`: `useJobRuns(id)`, `useRun(id)`, `useRecentRuns()`, `useKillRun()`.
+- [x] **4.2** `hooks/useRunOutput.ts`: subscribes to SSE `run.output` events for a given runId (open a second `EventSource` or extend `useServerEvents` with a tiny event emitter so components can listen) and appends chunks to local state; seeds from `useRun` when the run is already finished.
+- [x] **4.3** `components/runs/RunsTable.tsx`, `components/runs/RunDrawer.tsx` (right side panel; stdout/stderr tabs; auto-scroll toggle; Kill button when running; copy output).
+- [x] **4.4** `pages/JobDetailPage.tsx` per `DESIGN.md §4.4`. Enabled switch in the header uses `useToggleJob`.
+- [x] **4.5** `pages/ActivityPage.tsx`: `useRecentRuns` + status/job filters + same drawer.
 
-**Verify:** create a job with command `for i in 1 2 3 4 5; do echo line $i; sleep 1; done` (PowerShell equivalent on Windows), run now, watch lines appear live in the drawer; a job with `sleep 100` and timeout 3 ends as `timeout`; Kill works.
+**Verify:** ✅ The five-line sleep loop streams into the drawer a line at a time. Opening the drawer 3.5s into that run shows lines 1-4 immediately and then continues live, with no gap and no duplicates. `sleep 100` with a 3s timeout ended as **timeout** (3.0s, exit 143). Kill on a `sleep 300` run ended it as **killed** in 1.7s with no orphan process left behind. Activity lists runs across jobs with status/job filters.
+
+*Changed during verification:* output used to be written only when a run finished, so a drawer opened mid-run showed nothing until the end. The executor now keeps a live buffer per active run, `GET /api/runs/:id` serves it with an `outputSeq` marker, and the client appends only chunks newer than that marker. `Run.outputSeq` (optional) and `seq` on `run.output` events were added to the shared schemas for this.
+
+*Implementation note:* `useServerEvents` republishes every event on a small client bus (`lib/eventBus.ts`) so one EventSource serves both cache invalidation and live output. Added a `Drawer` UI primitive (slide-over) that Phase 1 did not list.
 
 ## Phase 5 — Settings and LLM wiring
 
